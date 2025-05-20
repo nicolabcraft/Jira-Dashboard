@@ -37,10 +37,9 @@ function showLoader(selector) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Affichage "en attente" pour les KPIs principaux
+    // Affichage initial des KPIs principaux
     document.getElementById('kpi-total').textContent = 'En attente...';
     document.getElementById('kpi-resolved').textContent = 'En attente...';
-
     // Affiche un loader sur chaque graphique
     showLoader('#chart-created-resolved');
     showLoader('#chart-department');
@@ -51,77 +50,50 @@ document.addEventListener('DOMContentLoaded', async function() {
     let kpis;
     try {
         kpis = await fetchOrFallback('/api/kpis', {});
-        console.log('API /api/kpis:', kpis);
     } catch (e) {
         showError('Erreur de chargement des KPIs', '.dashboard-row');
         return;
     }
     document.getElementById('kpi-total').textContent = kpis.total_tickets;
-    document.getElementById('kpi-resolved').textContent = kpis.tickets_resolved;    
-    // Nombre de tickets relancés et clôturés
-    const relaunchedCount = kpis.relaunch_sent || kpis.relaunched || 0;
-    const closedCount = kpis.relaunch_closed || kpis.closed || 0;
-    document.getElementById('kpi-relaunched').textContent = relaunchedCount;
-    document.getElementById('kpi-closed').textContent = closedCount;
-
-    // Affichage météo: encadrer l'icône correspondant à la santé du support
+    document.getElementById('kpi-resolved').textContent = kpis.tickets_resolved;
+    document.getElementById('kpi-relaunched').textContent = kpis.relaunch_sent || kpis.relaunched || 0;
+    document.getElementById('kpi-closed').textContent = kpis.relaunch_closed || kpis.closed || 0;
+    // Update support health icons
     const pct = kpis.support_health;
     const icons = document.querySelectorAll('#weather-row .weather-icon');
-    // Déterminer l'index de l'icône: 0=soleil,1=nuage,2=pluie,3=orage
     let idx = pct >= 80 ? 0 : pct >= 60 ? 1 : pct >= 30 ? 2 : 3;
-    // Appliquer la classe selected au bon icône
     icons.forEach((el, i) => {
         if (i === idx) {
             el.classList.add('selected');
-            // Map index to valid border color
-            let borderColor;
-            switch(i) {
-                case 0: borderColor = '#7fff7e'; break; // soleil
-                case 1: borderColor = '#7ecfff'; break; // nuage
-                case 2: borderColor = '#ffb347'; break; // pluie
-                case 3: borderColor = '#ff7e7e'; break; // orage
-            }
-            el.style.color = borderColor;
+            const colors = ['#7fff7e','#7ecfff','#ffb347','#ff7e7e'];
+            el.style.color = colors[i];
         } else {
-            el.classList.remove('selected');
-            el.style.color = '';
-        }
+            el.classList.remove('selected'); el.style.color = ''; }
     });
-
-    // Charge de travail dynamique (anciennement leaderboard)
+    // Workload leaderboard
     const workload = kpis.workload || kpis.leaderboard || [];
     const leaderboardDiv = document.getElementById('leaderboard');
-    leaderboardDiv.innerHTML = '';
-    if (workload.length === 0) {
-        leaderboardDiv.innerHTML = '<span style="color:#ff7e7e">Aucune donnée équipe</span>';
-    } else {
-        workload.forEach((member, i) => {
-            const colors = chartColors;
+    leaderboardDiv.innerHTML = workload.length ? '' : '<span style="color:#ff7e7e">Aucune donnée équipe</span>';
+    workload.forEach((member,i)=>{
+        if(member.name && member.name!=='Inconnu'){
             const div = document.createElement('div');
-            div.className = 'member';
-            div.innerHTML = `<div class="avatar" style="background:${colors[i%colors.length]}"></div><div class="name">${member.name}</div><div class="score">${member.score}</div>`;
+            div.className='member';
+            div.innerHTML=`<div class="avatar" style="background:${chartColors[i%chartColors.length]}"></div><div class="name">${member.name}</div><div class="score">${member.score}</div>`;
             leaderboardDiv.appendChild(div);
-        });
-    }
-
-    // --- Optimisation chargement et UX ---
-    // Tickets créés vs résolus (line chart) dynamique (30 jours par jour)
-    let createdVsResolved;
-    try {
-        createdVsResolved = await fetchOrFallback('/tickets_created_vs_resolved', {created: {}, resolved: {}});
-        console.log('API /tickets_created_vs_resolved:', createdVsResolved);
-    } catch (e) {
-        showError('Erreur de chargement des tickets créés/résolus', '#chart-created-resolved');
-    }
-    if (createdVsResolved && createdVsResolved.created) {
+        }
+    });
+    // Charts with params
+    const respCR = await fetchOrFallback(`/tickets_created_vs_resolved`, {created:{},resolved:{}});
+    console.log('API /tickets_created_vs_resolved:', respCR);
+    if (respCR && respCR.created) {
         // Limite à 30 derniers jours
         const allDatesSorted = Array.from(new Set([
-            ...Object.keys(createdVsResolved.created),
-            ...Object.keys(createdVsResolved.resolved)
+            ...Object.keys(respCR.created),
+            ...Object.keys(respCR.resolved)
         ])).sort();
         const last30 = allDatesSorted.slice(-30);
-        const createdData = last30.map(date => createdVsResolved.created[date] || 0);
-        const resolvedData = last30.map(date => createdVsResolved.resolved[date] || 0);
+        const createdData = last30.map(date => respCR.created[date] || 0);
+        const resolvedData = last30.map(date => respCR.resolved[date] || 0);
         if(document.getElementById('chart-created-resolved')) {
             new Chart(document.getElementById('chart-created-resolved'), {
                 type: 'line',
@@ -146,22 +118,61 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Tickets par pôle (pie chart) dynamique (loader déjà affiché)
     let departmentData;
     try {
-        departmentData = await fetchOrFallback('/tickets_by_department', {});
+        departmentData = await fetchOrFallback(`/tickets_by_department`, {});
         console.log('API /tickets_by_department:', departmentData);
     } catch (e) {
         showError('Erreur de chargement des pôles', '#chart-department');
     }
     if (departmentData && Object.keys(departmentData).length > 0) {
+        const entries = Object.entries(departmentData).sort((a,b)=>b[1]-a[1]);
+        const top = entries.slice(0,5);
+        const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
+        if(otherCount>0) top.push(['Autre', otherCount]);
+        const labels = top.map(([k])=>k);
+        const values = top.map(([,v])=>v);
         new Chart(document.getElementById('chart-department'), {
-            type: 'pie',
-            data: {
-                labels: Object.keys(departmentData),
-                datasets: [{
-                    data: Object.values(departmentData),
-                    backgroundColor: chartColors,
-                }]
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3 }] },
+            options: {
+                devicePixelRatio: window.devicePixelRatio || 1,
+                responsive: true,
+                cutout: '50%',
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label(ctx) {
+                                const val = ctx.parsed;
+                                const data = ctx.dataset.data;
+                                const tot = data.reduce((a,b)=>a+b,0);
+                                const pct = ((val/tot)*100).toFixed(1);
+                                return `${ctx.label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
             },
-            options: {responsive:true, plugins:{legend:{position:'bottom'}}}
+            plugins: [{
+                id: 'centerText',
+                afterDraw(chart) {
+                    const active = chart.tooltip._active && chart.tooltip._active[0];
+                    if (active) {
+                        const val = chart.data.datasets[0].data[active.index];
+                        const tot = chart.data.datasets[0].data.reduce((a,b) => a + b, 0);
+                        if (tot > 0) {
+                            const pct = ((val / tot) * 100).toFixed(1) + '%';
+                            const { ctx, chartArea: { left, right, top, bottom } } = chart;
+                            ctx.save();
+                            ctx.font = 'bold 18px sans-serif';
+                            ctx.fillStyle = '#000';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(pct, (left + right) / 2, (top + bottom) / 2);
+                            ctx.restore();
+                        }
+                    }
+                }
+            }]
         });
     } else {
         showError('Aucune donnée pôle', '#chart-department');
@@ -170,22 +181,61 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Tickets par étiquette (pie chart) dynamique (loader déjà affiché)
     let labelData;
     try {
-        labelData = await fetchOrFallback('/tickets_by_label', {});
+        labelData = await fetchOrFallback(`/tickets_by_label`, {});
         console.log('API /tickets_by_label:', labelData);
     } catch (e) {
         showError('Erreur de chargement des étiquettes', '#chart-label');
     }
     if (labelData && Object.keys(labelData).length > 0) {
+        const entries = Object.entries(labelData).sort((a,b)=>b[1]-a[1]);
+        const top = entries.slice(0,5);
+        const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
+        if(otherCount>0) top.push(['Autre', otherCount]);
+        const labels = top.map(([k])=>k);
+        const values = top.map(([,v])=>v);
         new Chart(document.getElementById('chart-label'), {
-            type: 'pie',
-            data: {
-                labels: Object.keys(labelData),
-                datasets: [{
-                    data: Object.values(labelData),
-                    backgroundColor: chartColors,
-                }]
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3 }] },
+            options: {
+                devicePixelRatio: window.devicePixelRatio || 1,
+                responsive: true,
+                cutout: '50%',
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label(ctx) {
+                                const val = ctx.parsed;
+                                const data = ctx.dataset.data;
+                                const tot = data.reduce((a,b)=>a+b,0);
+                                const pct = ((val/tot)*100).toFixed(1);
+                                return `${ctx.label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
             },
-            options: {responsive:true, plugins:{legend:{position:'bottom'}}}
+            plugins: [{
+                id: 'centerText',
+                afterDraw(chart) {
+                    const active = chart.tooltip._active && chart.tooltip._active[0];
+                    if (active) {
+                        const val = chart.data.datasets[0].data[active.index];
+                        const tot = chart.data.datasets[0].data.reduce((a,b) => a + b, 0);
+                        if (tot > 0) {
+                            const pct = ((val / tot) * 100).toFixed(1) + '%';
+                            const { ctx, chartArea: { left, right, top, bottom } } = chart;
+                            ctx.save();
+                            ctx.font = 'bold 18px sans-serif';
+                            ctx.fillStyle = '#000';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(pct, (left + right) / 2, (top + bottom) / 2);
+                            ctx.restore();
+                        }
+                    }
+                }
+            }]
         });
     } else {
         showError('Aucune donnée étiquette', '#chart-label');
@@ -214,8 +264,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function updateStatusBlock() {
         // Supprime le loader sur le conteneur de statut
         const statusContainer = document.getElementById('chart-status');
-        if (statusContainer) statusContainer.innerHTML = '';
-         try {
+        if (statusContainer) { statusContainer.style.display = 'none'; }
+        try {
             statusDataRaw = await fetchOrFallback('/tickets_by_status', {});
             console.log('API /tickets_by_status:', statusDataRaw);
             // Si la réponse n'est pas vide, on la stocke
@@ -324,16 +374,52 @@ document.addEventListener('DOMContentLoaded', async function() {
             departmentData = await fetchOrFallback('/tickets_by_department', {});
             lastDepartmentData = departmentData;
             if (departmentData && Object.keys(departmentData).length > 0) {
+                const entries = Object.entries(departmentData).sort((a,b)=>b[1]-a[1]);
+                const top = entries.slice(0,5);
+                const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
+                if(otherCount>0) top.push(['Autre', otherCount]);
+                const labels = top.map(([k])=>k);
+                const values = top.map(([,v])=>v);
                 new Chart(document.getElementById('chart-department'), {
-                    type: 'pie',
-                    data: {
-                        labels: Object.keys(departmentData),
-                        datasets: [{
-                            data: Object.values(departmentData),
-                            backgroundColor: chartColors,
-                        }]
+                    type: 'doughnut',
+                    data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 6 }] },
+                    options: {
+                        devicePixelRatio: window.devicePixelRatio || 1,
+                        responsive: true,
+                        cutout: '50%',
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label(ctx) {
+                                        const val = ctx.parsed;
+                                        const data = ctx.dataset.data;
+                                        const tot = data.reduce((a,b)=>a+b,0);
+                                        const pct = ((val/tot)*100).toFixed(1);
+                                        return `${ctx.label}: ${val} (${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
                     },
-                    options: {responsive:true, plugins:{legend:{position:'bottom'}}}
+                    plugins: [{
+                        id: 'centerText',
+                        afterDraw(chart) {
+                            const active = chart.tooltip._active && chart.tooltip._active[0];
+                            if(active) {
+                                const val = chart.data.datasets[0].data[active.index];
+                                const tot = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+                                if (tot > 0) {
+                                    const pct = ((val/tot)*100).toFixed(1) + '%';
+                                    const {ctx, chartArea:{left,right,top,bottom}} = chart;
+                                    ctx.save(); ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#000';
+                                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                                    ctx.fillText(pct, (left+right)/2, (top+bottom)/2);
+                                    ctx.restore();
+                                }
+                            }
+                        }
+                    }]
                 });
             } else {
                 showError('Aucune donnée pôle', '#chart-department');
@@ -351,16 +437,55 @@ document.addEventListener('DOMContentLoaded', async function() {
             labelData = await fetchOrFallback('/tickets_by_label', {});
             lastLabelData = labelData;
             if (labelData && Object.keys(labelData).length > 0) {
+                const entries = Object.entries(labelData).sort((a,b)=>b[1]-a[1]);
+                const top = entries.slice(0,5);
+                const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
+                if(otherCount>0) top.push(['Autre', otherCount]);
+                const labels = top.map(([k])=>k);
+                const values = top.map(([,v])=>v);
                 new Chart(document.getElementById('chart-label'), {
-                    type: 'pie',
-                    data: {
-                        labels: Object.keys(labelData),
-                        datasets: [{
-                            data: Object.values(labelData),
-                            backgroundColor: chartColors,
-                        }]
+                    type: 'doughnut',
+                    data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 6 }] },
+                    options: {
+                        devicePixelRatio: window.devicePixelRatio || 1,
+                        responsive: true,
+                        cutout: '50%',
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label(ctx) {
+                                        const val = ctx.parsed;
+                                        const data = ctx.dataset.data;
+                                        const tot = data.reduce((a,b)=>a+b,0);
+                                        const pct = ((val/tot)*100).toFixed(1);
+                                        return `${ctx.label}: ${val} (${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
                     },
-                    options: {responsive:true, plugins:{legend:{position:'bottom'}}}
+                    plugins: [{
+                        id: 'centerText',
+                        afterDraw(chart) {
+                            const active = chart.tooltip._active && chart.tooltip._active[0];
+                            if(active) {
+                                const val = chart.data.datasets[0].data[active.index];
+                                const tot = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+                                if (tot > 0) {
+                                    const pct = ((val/tot)*100).toFixed(1) + '%';
+                                    const { ctx, chartArea: { left, right, top, bottom } } = chart;
+                                    ctx.save();
+                                    ctx.font = 'bold 18px sans-serif';
+                                    ctx.fillStyle = '#000';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(pct, (left + right) / 2, (top + bottom) / 2);
+                                    ctx.restore();
+                                }
+                            }
+                        }
+                    }]
                 });
             } else {
                 showError('Aucune donnée étiquette', '#chart-label');
@@ -426,4 +551,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Premier chargement
     refreshAllBlocks();
     // Configuration du timer
-    setRefreshInterval(refreshInterval);});
+    setRefreshInterval(refreshInterval);
+});
+
+// Force high DPI for crisp rendering
+if (window.Chart && Chart.defaults) {
+    Chart.defaults.devicePixelRatio = window.devicePixelRatio || 1;
+}

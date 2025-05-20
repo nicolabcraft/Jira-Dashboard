@@ -18,6 +18,7 @@ load_dotenv()  # charge les variables depuis .env
 JIRA_URL = os.getenv("JIRA_URL")
 JIRA_USERNAME = os.getenv("JIRA_USERNAME")
 JIRA_TOKEN = os.getenv("JIRA_TOKEN")
+JIRA_PROJECT_DEFAULT = os.getenv("JIRA_PROJECT_DEFAULT", "HEL")
 # Liste d'IDs séparés par virgule dans .env
 JIRA_ASSIGNEES = os.getenv("JIRA_ASSIGNEES", "").split(",")
 MONGODB_URI = os.getenv("MONGODB_URI")
@@ -84,13 +85,18 @@ def get_resolved_tickets():
     return fetch_jira_issues(jql, fields='assignee,resolutiondate,status')
 
 # --- FONCTION POUR METTRE À JOUR LES STATS DASHBOARD EN BASE ---
-def update_dashboard_stats():
-    print("[Jira] Début de la mise à jour des stats depuis Jira...")
+def update_dashboard_stats(return_data=False, projectKey=None, assignees_override=None):
+    """Retrieve stats, optionally for a specific project and assignees list"""
+    proj = projectKey or JIRA_PROJECT_DEFAULT
+    assignees_list = assignees_override if assignees_override is not None else JIRA_ASSIGNEES
+    # Compute composite id for storage
+    id_key = f"{proj}_{'_'.join(assignees_list)}"
+    print(f"[Jira] Mise à jour des stats pour projet {proj} et assignees {assignees_list}")
 
 
     # Calcul des stats comme dans /api/kpis
-    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql_total = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate > -30d'
+    assignees_str = ','.join([f'"{a}"' for a in assignees_list])
+    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
     total_issues = fetch_jira_issues(jql_total, fields='id')
     total_tickets = len(total_issues)
     print(f"[Jira] Tickets totaux (30j): {total_tickets}")
@@ -116,7 +122,7 @@ def update_dashboard_stats():
 
 
     # Tickets par statut
-    jql_status = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate > -30d'
+    jql_status = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
     issues_status = fetch_jira_issues(jql_status, fields='status')
     print(f"[Jira] Tickets par statut récupérés: {len(issues_status)}")
     status_counts = Counter()
@@ -126,7 +132,7 @@ def update_dashboard_stats():
 
 
     # Tickets par pôle
-    jql_dept = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate > -30d AND "Départements / Pôles[Select List (cascading)]" IS NOT EMPTY'
+    jql_dept = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND "Départements / Pôles[Select List (cascading)]" IS NOT EMPTY'
     issues_dept = fetch_jira_issues(jql_dept, fields='customfield_12002')
     print(f"[Jira] Tickets par pôle récupérés: {len(issues_dept)}")
     department_counts = Counter()
@@ -138,7 +144,7 @@ def update_dashboard_stats():
 
 
     # Tickets par étiquette
-    jql_label = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate > -30d AND status = Closed ORDER BY created ASC'
+    jql_label = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND status = Closed ORDER BY created ASC'
     issues_label = fetch_jira_issues(jql_label, fields='labels')
     print(f"[Jira] Tickets par étiquette récupérés: {len(issues_label)}")
     label_counts = Counter()
@@ -150,7 +156,7 @@ def update_dashboard_stats():
 
     # Tickets créés vs résolus (filtre sur 30j)
     date_30d = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
-    jql_cr = f'project = HEL AND assignee IN ({assignees_str}) AND (created >= "{date_30d}" OR resolutiondate >= "{date_30d}")'
+    jql_cr = f'project = {proj} AND assignee IN ({assignees_str}) AND (created >= "{date_30d}" OR resolutiondate >= "{date_30d}")'
     issues_cr = fetch_jira_issues(jql_cr, fields='created,resolutiondate')
     print(f"[Jira] Tickets créés/résolus récupérés (30j): {len(issues_cr)}")
     created_per_day = defaultdict(int)
@@ -166,7 +172,7 @@ def update_dashboard_stats():
             resolved_per_day[resolved_date] += 1
 
     # Tickets non résolus par jour (filtre sur 30j)
-    jql_unresolved = f'project = HEL AND assignee IN ({assignees_str}) AND created >= "{date_30d}" AND statusCategory != Done'
+    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created >= "{date_30d}" AND statusCategory != Done'
     issues_unresolved = fetch_jira_issues(jql_unresolved, fields='created')
     print(f"[Jira] Tickets non résolus récupérés (30j): {len(issues_unresolved)}")
     unresolved_per_day = defaultdict(int)
@@ -177,9 +183,9 @@ def update_dashboard_stats():
             unresolved_per_day[created_date] += 1
 
     # Tickets relancés et clôturés
-    jql_relaunched = f'project = HEL AND assignee IN ({assignees_str}) AND labels = RelanceEnvoyee'
+    jql_relaunched = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = RelanceEnvoyee'
     relaunched = len(fetch_jira_issues(jql_relaunched, fields='labels'))
-    jql_closed = f'project = HEL AND assignee IN ({assignees_str}) AND labels = "RelanceClose" AND updatedDate > -30d'
+    jql_closed = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = "RelanceClose" AND updatedDate > -30d'
     closed = len(fetch_jira_issues(jql_closed, fields='labels'))
 
     # Stockage en base
@@ -203,21 +209,29 @@ def update_dashboard_stats():
         'unresolved_tickets': dict(unresolved_per_day),
         'updated_at': datetime.utcnow()
     }
-    if mongo_ok:
-        mongo_stats.replace_one({'_id': 'dashboard'}, {**stats, '_id': 'dashboard'}, upsert=True)
-        print('[MongoDB] Stats dashboard sauvegardées.')
-    else:
-        print('[MongoDB] Non accessible, stats non persistées')
+    if mongo_ok and not return_data:
+        # Store stats per project-team key
+        mongo_stats.replace_one({'_id': id_key}, {**stats, '_id': id_key}, upsert=True)
+        print(f'[MongoDB] Stats sauvegardées pour {id_key}.')
+    if return_data:
+        return stats
 
 # --- ROUTES QUI LISENT LA DB ---
 @app.route('/api/kpis')
 def api_kpis():
+    # Dynamic KPIs, optionally per projectKey
+    projectKey = request.args.get('projectKey')
+    if projectKey:
+        # Return fresh stats for project
+        stats = update_dashboard_stats(return_data=True, projectKey=projectKey)
+        return jsonify(stats)
+    # Fallback: read default dashboard stats from Mongo
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
-    # Lecture des stats depuis MongoDB
     stats = mongo_stats.find_one({'_id': 'dashboard'})
     if not stats:
         return jsonify({'error': 'Stats non trouvées'}), 404
+    stats.pop('_id', None)
     return jsonify(stats)
 
 @app.route('/api/stats')
@@ -320,6 +334,48 @@ def api_reports():
         'statuses': dict(status_counts),
         'departments': dict(dept_counts)
     })
+
+@app.route('/api/projects')
+def api_projects():
+    # Liste des projets Jira accessiblse
+    url = f"{JIRA_URL.rstrip('/')}/rest/api/3/project/search?orderBy=key"
+    resp = requests.get(url, auth=(JIRA_USERNAME, JIRA_TOKEN))
+    if resp.status_code != 200:
+        return jsonify({'error':'jira error','details':resp.text}), resp.status_code
+    data = resp.json().get('values', [])
+    return jsonify([{ 'key': p.get('key'), 'name': p.get('name') } for p in data])
+
+@app.route('/api/tickets')
+def api_tickets():
+    projectKey = request.args.get('projectKey')
+    teamId = request.args.get('teamId')
+    if not projectKey or not teamId:
+        return jsonify({'error':'projectKey and teamId required'}),400
+    # Fetch team members via Jira REST API
+    team_url = f"{JIRA_URL.rstrip('/')}/rest/api/3/people/team/{teamId}"
+    resp = requests.get(team_url, auth=(JIRA_USERNAME, JIRA_TOKEN))
+    if resp.status_code != 200:
+        return jsonify({'error':'jira error','details':resp.text}), resp.status_code
+    members = [m.get('accountId') for m in resp.json().get('values',[]) if m.get('accountId')]
+    if not members:
+        return jsonify([])  # no team members
+    assignees_str = ','.join([f'"{a}"' for a in members])
+    # Fetch issues from Jira
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) ORDER BY created DESC'
+    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=100)
+    # Simplify payload
+    tickets = []
+    for t in issues:
+        fields = t.get('fields', {})
+        tickets.append({
+            'key': t.get('key'),
+            'summary': fields.get('summary'),
+            'status': fields.get('status',{}).get('name'),
+            'assignee': fields.get('assignee',{}).get('displayName'),
+            'created': fields.get('created'),
+            'updated': fields.get('updated'),
+        })
+    return jsonify(tickets)
 
 # --- ROUTE POUR SERVIR LA PAGE D'ACCUEIL ---
 @app.route('/')
