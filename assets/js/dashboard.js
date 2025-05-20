@@ -40,8 +40,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Affichage "en attente" pour les KPIs principaux
     document.getElementById('kpi-total').textContent = 'En attente...';
     document.getElementById('kpi-resolved').textContent = 'En attente...';
-    document.getElementById('kpi-support-health').textContent = 'En attente...';
-    document.getElementById('kpi-support-health-label').textContent = 'En attente...';
 
     // Affiche un loader sur chaque graphique
     showLoader('#chart-created-resolved');
@@ -59,28 +57,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
     document.getElementById('kpi-total').textContent = kpis.total_tickets;
-    document.getElementById('kpi-resolved').textContent = kpis.tickets_resolved;
-    document.getElementById('kpi-support-health').textContent = kpis.support_health + '%';
-    document.getElementById('kpi-support-health-label').textContent = kpis.support_health_label;
+    document.getElementById('kpi-resolved').textContent = kpis.tickets_resolved;    
     // Nombre de tickets relancés et clôturés
     const relaunchedCount = kpis.relaunch_sent || kpis.relaunched || 0;
     const closedCount = kpis.relaunch_closed || kpis.closed || 0;
     document.getElementById('kpi-relaunched').textContent = relaunchedCount;
     document.getElementById('kpi-closed').textContent = closedCount;
-    // Cercle santé support dynamique
-    const healthCircle = document.getElementById('kpi-support-health');
-    const updateHealthCircle = () => {
-        const size = Math.min(healthCircle.parentElement.offsetWidth, 60);
-        healthCircle.style.width = size + 'px';
-        healthCircle.style.height = size + 'px';
-        healthCircle.style.fontSize = (size * 0.35) + 'px';
-        let color = '#7fff7e';
-        if (kpis.support_health < 40) color = '#ff7e7e';
-        else if (kpis.support_health < 70) color = '#ffb347';
-        healthCircle.style.background = `conic-gradient(${color} 0 ${kpis.support_health}%,#e8eef6 ${kpis.support_health}% 100%)`;
-    };
-    window.addEventListener('resize', updateHealthCircle);
-    updateHealthCircle();
+
+    // Affichage météo: encadrer l'icône correspondant à la santé du support
+    const pct = kpis.support_health;
+    const icons = document.querySelectorAll('#weather-row .weather-icon');
+    // Déterminer l'index de l'icône: 0=soleil,1=nuage,2=pluie,3=orage
+    let idx = pct >= 80 ? 0 : pct >= 60 ? 1 : pct >= 30 ? 2 : 3;
+    // Appliquer la classe selected au bon icône
+    icons.forEach((el, i) => {
+        if (i === idx) {
+            el.classList.add('selected');
+            // Map index to valid border color
+            let borderColor;
+            switch(i) {
+                case 0: borderColor = '#7fff7e'; break; // soleil
+                case 1: borderColor = '#7ecfff'; break; // nuage
+                case 2: borderColor = '#ffb347'; break; // pluie
+                case 3: borderColor = '#ff7e7e'; break; // orage
+            }
+            el.style.color = borderColor;
+        } else {
+            el.classList.remove('selected');
+            el.style.color = '';
+        }
+    });
+
     // Charge de travail dynamique (anciennement leaderboard)
     const workload = kpis.workload || kpis.leaderboard || [];
     const leaderboardDiv = document.getElementById('leaderboard');
