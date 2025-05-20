@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/modele.css">
+    <link rel="icon" href="../assets/img/favicon.png">
+    <script>
+        window.API_BASE = 'http://127.0.0.1:5000';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../assets/js/dashboard.js" defer></script>
+    <script src="../assets/js/script.js" defer></script>
+    <script src="../assets/js/overlay.js" defer></script>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <button id="toggle-sidebar-btn">☰</button>
+        <h1>Jira Tickets</h1>
+        <nav>
+            <a href="dashboard.html" class="active" data-icon="🏠"><span>Tableau de bord</span></a>
+            <a href="tickets.html" data-icon="🎫"><span>Tickets</span></a>
+            <a href="rapports.html" data-icon="📊"><span>Rapports</span></a>
+        </nav>
+        <div class="bottom">
+            <button id="logout-btn">Se déconnecter</button>
+        </div>
+    </aside>
+    <main class="main">
+        <div class="dashboard-title">Vue d'ensemble - Jira</div>
+        <div class="dashboard-row">
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+                    <div style="flex:1;text-align:center;">
+                        <h2>Nombre de tickets</h2>
+                        <div class="kpi" id="kpi-total">...</div>
+                    </div>
+                    <div style="width:1px;height:60px;background:#e8eef6;"></div>
+                    <div style="flex:1;text-align:center;">
+                        <h2>Tickets résolus</h2>
+                        <div class="kpi" id="kpi-resolved">...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+                    <div style="flex:1;text-align:center;">
+                        <h2>Relance Envoyée</h2>
+                        <div class="kpi" id="kpi-relaunched">...</div>
+                        <div style="font-size:0.9em;display:flex;align-items:center;justify-content:center;gap:4px;">
+                            <img src="../assets/img/up.svg" alt="Relance Envoyée" style="width:16px;height:16px;"/>
+                            <span>Relance Envoyée</span>
+                        </div>
+                    </div>
+                    <div style="width:1px;height:60px;background:#e8eef6;"></div>
+                    <div style="flex:1;text-align:center;">
+                        <h2>Ticket Clôturé</h2>
+                        <div class="kpi" id="kpi-closed">...</div>
+                        <div style="font-size:0.9em;display:flex;align-items:center;justify-content:center;gap:4px;">
+                            <img src="../assets/img/down.svg" alt="Ticket Clôturé" style="width:16px;height:16px;"/>
+                            <span>Ticket Clôturé</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Santé du support</h2>
+                <div style="display:flex;align-items:center;gap:18px;">
+                    <div id="kpi-support-health" style="width:60px;height:60px;border-radius:50%;background:conic-gradient(#7fff7e 0 70%,#ffb347 70% 100%);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.1em;color:#232a36;">...</div>
+                    <div id="kpi-support-health-label" style="font-size:1.2em;">...</div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-row">
+            <div class="card card-full-height">                <h2>Tickets créés vs résolus (30 jours)</h2>
+                <canvas id="chart-created-resolved" style="width:100%;height:160px;background:#e8eef6;border-radius:8px;"></canvas>
+            </div>
+            <div class="card">
+                <h2>Tickets par statut (30 jours)</h2>
+                <div id="chart-status" style="width:100%;background:#e8eef6;border-radius:8px;"></div>
+            </div>
+            <div class="card">
+                <h2>Charge de travail (30 jours)</h2>
+                <div class="team-list" id="leaderboard">
+                    <!-- JS -->
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-row">
+            <div class="card">
+                <h2>Tickets par pôle (30 jours)</h2>
+                <canvas id="chart-department" style="width:100%;height:180px;background:#e8eef6;border-radius:8px;"></canvas>
+            </div>
+            <div class="card">
+                <h2>Tickets par étiquette (30 jours)</h2>
+                <canvas id="chart-label" style="width:100%;height:180px;background:#e8eef6;border-radius:8px;"></canvas>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

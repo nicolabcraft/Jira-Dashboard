@@ -1,0 +1,329 @@
+/* --- STYLES DASHBOARD JIRA --- */
+
+body {
+  margin: 0;
+  background: #e8eef6;
+  font-family: 'Inter', Arial, sans-serif;
+  color: #232a36;
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #181c24;
+  color: #fff;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0 0 0;
+  box-shadow: 2px 0 12px #0001;
+}
+
+.sidebar h1 {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+}
+
+.sidebar nav {
+  width: 100%;
+}
+.sidebar nav a {
+  display: block;
+  color: #b0b8c9;
+  text-decoration: none;
+  padding: 14px 32px;
+  font-size: 1.05em;
+  border-left: 4px solid transparent;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.sidebar nav a.active, .sidebar nav a:hover {
+  background: #232a36;
+  color: #7ecfff;
+  border-left: 4px solid #7ecfff;
+}
+.sidebar .bottom {
+  margin-top: auto;
+  padding-bottom: 32px;
+  width: 100%;
+  text-align: center;
+}
+.sidebar .bottom button {
+  background: #232a36;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  cursor: pointer;
+  font-size: 1em;
+  margin-top: 16px;
+}
+
+/* Global button styles for modern look */
+button {
+  background: #7ecfff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+button:hover {
+  background: #6bbadf;
+  transform: translateY(-1px);
+}
+button:active {
+  background: #5aaac9;
+  transform: translateY(0);
+}
+
+/* Style for sidebar toggle button */
+#toggle-sidebar-btn {
+  background: transparent;
+  color: #fff;
+  font-size: 1.5em;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  padding: 6px;
+}
+#toggle-sidebar-btn:hover {
+  background: #232a36;
+}
+
+/* Styles for login page */
+.login-container {
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+}
+.login-container form {
+  background: #fff;
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px #0001;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-container input {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+}
+.login-container button {
+  padding: 12px;
+  background: #7ecfff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.main {
+  flex: 1;
+  padding: 40px 32px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dashboard-title {
+  font-size: 2em;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #232a36;
+}
+
+.dashboard-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 12px #0001;
+  padding: 28px 32px 24px 32px;
+  min-width: 320px;
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Styles pour les graphiques qui doivent prendre toute la hauteur */
+.card-full-height {
+    height: auto;  /* container auto height, chart height via canvas */
+}
+
+.card-full-height canvas {
+    /* remove forced calc height, allow inline canvas height */
+    width: 100% !important;
+}
+
+/* Style pour les barres horizontales qui doivent prendre toute la largeur */
+#status-bars {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.card h2 {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #7ecfff;
+  margin: 0 0 18px 0;
+}
+
+.kpi {
+  font-size: 2.2em;
+  color: #232a36;
+  font-weight: bold;
+  margin: 10px 0 0 0;
+}
+
+.progress-bar {
+  width: 100%;
+  background: #e8eef6;
+  border-radius: 8px;
+  height: 16px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.progress {
+  height: 100%;
+  background: linear-gradient(90deg, #7ecfff 60%, #b47eff 100%);
+}
+
+.team-list {
+  width: 100%;
+  margin-top: 10px;
+}
+.team-list .member {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.team-list .avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #7ecfff;
+  margin-right: 12px;
+}
+.team-list .name {
+  flex: 1;
+}
+.team-list .score {
+  font-weight: 600;
+  color: #7ecfff;
+}
+
+/* Sidebar collapse styling */
+.sidebar.collapsed {
+  width: 60px;
+}
+.sidebar.collapsed h1,
+.sidebar.collapsed .bottom button {
+  display: none;
+}
+.sidebar.collapsed nav a {
+  padding: 14px 0;
+}
+.sidebar.collapsed nav a span {
+  display: none;
+}
+.sidebar.collapsed nav a::before {
+  display: inline-block;
+  margin-right: 0;
+  font-size: 1.2em;
+}
+nav a[data-icon]::before {
+  display: none;
+  content: attr(data-icon);
+  margin-right: 12px;
+}
+
+/* Styles for report generation form */
+.report-form {
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px #0001;
+  max-width: 500px;
+}
+.report-form h3 {
+  margin-top: 0;
+  color: #232a36;
+}
+.report-form .form-group {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.report-form label {
+  font-size: 0.95em;
+  color: #232a36;
+}
+.report-form input[type="month"] {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* API error overlay */
+#api-error-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.api-error-box {
+  background: #fff;
+  padding: 24px;
+  border: 2px solid #ff4d4d;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 400px;
+}
+.api-error-box h2 {
+  margin-top: 0;
+  color: #ff4d4d;
+}
+.api-error-box p {
+  margin: 16px 0;
+}
+.api-error-box button {
+  background: #ff4d4d;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.api-error-box button:hover {
+  background: #e04343;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-row { flex-direction: column; }
+}
