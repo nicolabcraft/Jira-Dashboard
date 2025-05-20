@@ -369,6 +369,44 @@ nav a[data-icon]::before {
   border-color: #7ecfff;
 }
 
+/* Dark mode overrides */
+body.dark-mode {
+  background: #1e2430;
+  color: #e0e6f1;
+}
+body.dark-mode .card {
+  background: #2b3040;
+  color: #e0e6f1;
+}
+body.dark-mode .sidebar {
+  background: #232a3b;
+  color: #e0e6f1;
+}
+body.dark-mode .sidebar nav a {
+  color: #e0e6f1;
+}
+body.dark-mode .sidebar nav a.active,
+body.dark-mode .sidebar nav a:hover {
+  background: #3b4252;
+  color: #7ecfff;
+  border-left-color: #7ecfff;
+}
+body.dark-mode button {
+  background: #3b4252;
+  color: #e0e6f1;
+}
+body.dark-mode button:hover {
+  background: #4c566a;
+}
+body.dark-mode .dashboard-row,
+body.dark-mode .progress-bar,
+body.dark-mode #status-bars > div > div:nth-child(2) {
+  background: #2b3040;
+}
+body.dark-mode .weather-row .weather-icon.selected {
+  border-color: currentColor;
+}
+
 @media (max-width: 1100px) {
   .dashboard-row { flex-direction: column; }
 }

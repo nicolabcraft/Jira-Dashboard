@@ -558,3 +558,50 @@ document.addEventListener('DOMContentLoaded', async function() {
 if (window.Chart && Chart.defaults) {
     Chart.defaults.devicePixelRatio = window.devicePixelRatio || 1;
 }
+
+// ...existing renderDoughnutChart helper...
+function renderDoughnutChart(ctx, rawData) {
+    const { labels: rawLabels, data: rawValues } = prepareTopData(rawData);
+    // Combine and sort ascending
+    const combined = rawLabels.map((label, i) => ({ label, value: rawValues[i], color: chartColors[i % chartColors.length] }));
+    combined.sort((a, b) => a.value - b.value);
+    const labels = combined.map(d => d.label);
+    const data = combined.map(d => d.value);
+    const backgroundColor = combined.map(d => d.color);
+    return new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor, borderWidth: 0, borderRadius: 8 }] },
+         options: {
+             devicePixelRatio: window.devicePixelRatio || 1,
+             responsive: true,
+             cutout: '50%',
+             plugins: {
+                 legend: { position: 'bottom', labels: { color: '#000' } },
+                 tooltip: { callbacks: { label(ctx) {
+                     const val = ctx.parsed;
+                     const tot = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                     const pct = tot ? (val/tot*100).toFixed(1) : 0;
+                     return `${ctx.label}: ${val} (${pct}%)`;
+                 } } }
+             }
+         },
+         plugins: [{
+             id: 'centerText',
+             afterDraw(chart) {
+                 const active = chart.tooltip._active && chart.tooltip._active[0];
+                 if (active) {
+                     const val = chart.data.datasets[0].data[active.index];
+                     const tot = chart.data.datasets[0].data.reduce((a,b) => a + b, 0);
+                     if (tot > 0) {
+                         const pct = (val/tot*100).toFixed(1) + '%';
+                         const { ctx, chartArea: { left, right, top, bottom } } = chart;
+                         ctx.save(); ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#000';
+                         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                         ctx.fillText(pct, (left+right)/2, (top+bottom)/2);
+                         ctx.restore();
+                     }
+                 }
+             }
+         }]
+     });
+}

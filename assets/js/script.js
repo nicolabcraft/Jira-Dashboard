@@ -41,5 +41,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelector('.sidebar').classList.toggle('collapsed');
             });
         }
+        // Theme toggle (for dashboard)
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            // Restore saved mode
+            const darkMode = localStorage.getItem('darkMode') === 'true';
+            document.body.classList.toggle('dark-mode', darkMode);
+            themeToggle.checked = darkMode;
+            // On change, toggle mode and reload for chart re-render
+            themeToggle.addEventListener('change', e => {
+                const isDark = e.target.checked;
+                localStorage.setItem('darkMode', isDark);
+                document.body.classList.toggle('dark-mode', isDark);
+                setTimeout(() => window.location.reload(), 100);
+            });
+        }
     }
 });
