@@ -1,16 +1,19 @@
-from flask import Flask, jsonify, request
-import requests
-from datetime import datetime, timedelta
-import base64
+from flask import Flask, jsonify, request, session, redirect, url_for
+from flask_cors import CORS
+from flask_session import Session
+from pymongo import MongoClient
+from dotenv import load_dotenv
 import os
-from flask_cors import CORS  # Importez Flask-CORS
+import requests
+from requests_oauthlib import OAuth2Session
+import json
+from datetime import datetime, timedelta
 from collections import Counter, defaultdict
 from functools import lru_cache
 from time import time
-from pymongo import MongoClient, errors
-from dotenv import load_dotenv
 import threading
 import time
+from oauthlib.oauth2 import WebApplicationClient
 
 load_dotenv()  # charge les variables depuis .env
 
@@ -24,6 +27,10 @@ JIRA_ASSIGNEES = os.getenv("JIRA_ASSIGNEES", "").split(",")
 MONGODB_URI = os.getenv("MONGODB_URI")
 MONGODB_DB = os.getenv("MONGODB_DB", "studiapijira")
 MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION", "stats")
+USERS_DB = os.getenv("USERS_DB", "users")  # NEW: db for users
+USERS_COLLECTION = os.getenv("USERS_COLLECTION", "users")  # NEW: collection for users
+SESSION_DB = os.getenv("SESSION_DB", "users")  # NEW: db for sessions
+SESSION_COLLECTION = os.getenv("SESSION_COLLECTION", "sessions")  # NEW: collection for sessions
 
 # Connexion MongoDB Atlas avec réessai automatique
 mongo_ok = False
@@ -32,6 +39,9 @@ while not mongo_ok:
         mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=3000)
         mongo_db = mongo_client[MONGODB_DB]
         mongo_stats = mongo_db[MONGODB_COLLECTION]
+        users_db = mongo_client[USERS_DB]  # users db
+        users_collection = users_db[USERS_COLLECTION]  # users collection
+        session_db = mongo_client[SESSION_DB]  # session db
         mongo_client.server_info()  # Test connexion
         mongo_ok = True
         print('[MongoDB] Connexion réussie')
@@ -39,8 +49,22 @@ while not mongo_ok:
         print(f"[MongoDB] Connexion échouée : {e}. Nouvelle tentative dans 5s...")
         time.sleep(5)
 
+# --- Flask Session config for MongoDB ---
 app = Flask(__name__, static_folder='.', static_url_path='')
-CORS()#app, resources={r"/api/*": {"origins": ["https://studi.nicolabcraft.xyz"]}})  # Secure CORS: only allow your production domain
+app.config['SESSION_TYPE'] = 'mongodb'
+app.config['SESSION_MONGODB'] = mongo_client
+app.config['SESSION_MONGODB_DB'] = SESSION_DB
+app.config['SESSION_MONGODB_COLLECT'] = SESSION_COLLECTION
+app.config['SESSION_PERMANENT'] = False
+app.secret_key = os.getenv('SECRET_KEY', 'changeme')
+Session(app)
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+GOOGLE_DISCOVERY_URL = (
+    "https://accounts.google.com/.well-known/openid-configuration"
+)
+REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/api/login/google/callback')
+client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
 # --- Fonctions utilitaires minimales pour éviter les erreurs ---
 def fetch_jira_issues(jql, fields=None, max_results=100):
@@ -377,6 +401,61 @@ def api_tickets():
             'updated': fields.get('updated'),
         })
     return jsonify(tickets)
+
+# --- User login with MongoDB ---
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    user = users_collection.find_one({'username': username, 'password': password})
+    if user:
+        session['user'] = username
+        return jsonify({'success': True, 'username': username})
+    return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+
+@app.route('/api/logout')
+def logout():
+    session.pop('user', None)
+    return jsonify({'success': True})
+
+@app.route('/api/user')
+def get_user():
+    if 'user' in session:
+        return jsonify({'username': session['user']})
+    return jsonify({'username': None}), 401
+
+# --- Google SSO ---
+def get_google_provider_cfg():
+    return requests.get(GOOGLE_DISCOVERY_URL).json()
+
+@app.route('/api/login/google')
+def google_login():
+    google_provider_cfg = get_google_provider_cfg()
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
+    oauth = OAuth2Session(GOOGLE_CLIENT_ID, redirect_uri=REDIRECT_URI, scope=["openid", "email", "profile"])
+    authorization_url, state = oauth.authorization_url(authorization_endpoint, access_type="offline", prompt="consent")
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+@app.route('/api/login/google/callback')
+def google_callback():
+    oauth = OAuth2Session(GOOGLE_CLIENT_ID, redirect_uri=REDIRECT_URI, state=session.get('oauth_state'))
+    google_provider_cfg = get_google_provider_cfg()
+    token_endpoint = google_provider_cfg["token_endpoint"]
+    token = oauth.fetch_token(
+        token_endpoint,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        authorization_response=request.url
+    )
+    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
+    resp = oauth.get(userinfo_endpoint)
+    userinfo = resp.json()
+    session['user'] = userinfo['email']
+    # Optionally, create user in users db if not exists
+    if not users_collection.find_one({'username': userinfo['email']}):
+        users_collection.insert_one({'username': userinfo['email'], 'google': True})
+    return redirect('/pages/dashboard.html')
 
 # --- ROUTE POUR SERVIR LA PAGE D'ACCUEIL ---
 @app.route('/')

@@ -6,20 +6,39 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'pages/dashboard.html';
             return;
         }
-        // Attach to the login button (not form submit)
+        // Login with username/password
         const loginBtn = document.getElementById('submit');
-        loginBtn.addEventListener('click', e => {
+        loginBtn.addEventListener('click', async e => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             if (username && password) {
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('username', username);
-                window.location.href = 'pages/dashboard.html';
+                // Call backend for auth
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('username', username);
+                    window.location.href = 'pages/dashboard.html';
+                } else {
+                    alert(data.error || 'Identifiants invalides');
+                }
             } else {
                 alert('Veuillez entrer un utilisateur et un mot de passe valides');
             }
         });
+        // Google SSO
+        const googleBtn = document.querySelector('.signg');
+        if (googleBtn) {
+            googleBtn.addEventListener('click', e => {
+                e.preventDefault();
+                window.location.href = '/api/login/google';
+            });
+        }
     } else {
         // Auth check for other pages
         if (!localStorage.getItem('isLoggedIn')) {
