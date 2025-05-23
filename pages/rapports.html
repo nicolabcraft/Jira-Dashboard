@@ -6,6 +6,7 @@
     <title>Rapports</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/modele.css">
+    <link rel="stylesheet" href="../assets/css/sidebar.css">
     <link rel="icon" href="../assets/img/favicon.png">
     <script src="../assets/js/script.js" defer></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -14,21 +15,50 @@
     </script>
     <script src="../assets/js/overlay.js" defer></script>
     <script src="../assets/js/rapports.js" defer></script>
+    <script src="../assets/js/sidebar.js" defer></script>
+    <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
 <div class="layout">
-    <aside class="sidebar">
-        <button id="toggle-sidebar-btn">☰</button>
-        <h1>Jira Tickets</h1>
-        <nav>
-            <a href="dashboard.html" data-icon="🏠"><span>Tableau de bord</span></a>
-            <a href="tickets.html" data-icon="🎫"><span>Tickets</span></a>
-            <a href="rapports.html" class="active" data-icon="📊"><span>Rapports</span></a>
-        </nav>
-        <div class="bottom">
-            <button id="logout-btn">Se déconnecter</button>
+    <nav class="sidebar close">
+        <header>
+            <div class="image-text">
+                <span class="image">
+                    <img src="../assets/img/logo-large.png" alt="Logo">
+                </span>
+                <div class="text logo-text">
+                    <span class="name">Jira Dashboard</span>
+                    <span class="profession">Admin</span>
+                </div>
+            </div>
+            <i class='bx bx-chevron-right toggle'></i>
+        </header>
+        <div class="menu-bar">
+            <div class="menu">
+                <li class="search-box">
+                    <i class='bx bx-search icon'></i>
+                    <input type="text" placeholder="Search...">
+                </li>
+                <ul class="menu-links">
+                    <li class="nav-link"><a href="dashboard.html"><i class='bx bx-home-alt icon'></i><span class="text nav-text">Dashboard</span></a></li>
+                    <li class="nav-link"><a href="tickets.html"><i class='bx bx-bar-chart-alt-2 icon'></i><span class="text nav-text">Tickets</span></a></li>
+                    <li class="nav-link"><a href="rapports.html"><i class='bx bx-pie-chart-alt icon'></i><span class="text nav-text">Rapports</span></a></li>
+                    <li class="nav-link"><a href="users.html"><i class='bx bx-user icon'></i><span class="text nav-text">Utilisateurs</span></a></li>
+                </ul>
+            </div>
+            <div class="bottom-content">
+                <li><a href="#" id="logout-btn"><i class='bx bx-log-out icon'></i><span class="text nav-text">Logout</span></a></li>
+                <li class="mode">
+                    <div class="sun-moon">
+                        <i class='bx bx-moon icon moon'></i>
+                        <i class='bx bx-sun icon sun'></i>
+                    </div>
+                    <span class="mode-text text">Dark mode</span>
+                    <div class="toggle-switch"><span class="switch"></span></div>
+                </li>
+            </div>
         </div>
-    </aside>
+    </nav>
     <main class="main">
         <div class="dashboard-title">Rapports</div>
         <div class="report-form">
