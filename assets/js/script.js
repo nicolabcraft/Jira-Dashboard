@@ -6,8 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'pages/dashboard.html';
             return;
         }
-        const loginForm = document.getElementById('login-form');
-        loginForm.addEventListener('submit', e => {
+        // Attach to the login button (not form submit)
+        const loginBtn = document.getElementById('submit');
+        loginBtn.addEventListener('click', e => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
