@@ -76,12 +76,13 @@ def fetch_jira_issues(jql, fields=None, max_results=100):
         params['startAt'] += max_results
     return all_issues
 
-def get_resolved_tickets():
+def get_resolved_tickets(projectKey=None):
     """
     Retourne les tickets résolus (statusCategory = Done) sur les 30 derniers jours.
     """
+    proj = projectKey or JIRA_PROJECT_DEFAULT
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql = f'project = HEL AND assignee IN ({assignees_str}) AND statusCategory = Done AND resolved >= -30d'
+    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND statusCategory = Done AND resolved >= -30d'
     return fetch_jira_issues(jql, fields='assignee,resolutiondate,status')
 
 # --- FONCTION POUR METTRE À JOUR LES STATS DASHBOARD EN BASE ---
