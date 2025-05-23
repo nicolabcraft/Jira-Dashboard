@@ -1,0 +1,16 @@
+# Block access to sensitive files
+<FilesMatch "\.(py|sh|bat|env|ini|cfg|git|db|sqlite|json|yml|yaml|log)$">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+# Prevent directory listing
+Options -Indexes
+# Only allow access to static files
+<FilesMatch "\.(html|css|js|png|jpg|jpeg|svg|ico|woff|woff2|ttf|eot)$">
+  Order allow,deny
+  Allow from all
+</FilesMatch>
+# Force HTTPS (if not handled by Plesk)
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]

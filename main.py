@@ -40,7 +40,7 @@ while not mongo_ok:
         time.sleep(5)
 
 app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app)  # Activez CORS pour toutes les routes (ou configurez des options spécifiques)
+CORS()#app, resources={r"/api/*": {"origins": ["https://studi.nicolabcraft.xyz"]}})  # Secure CORS: only allow your production domain
 
 # --- Fonctions utilitaires minimales pour éviter les erreurs ---
 def fetch_jira_issues(jql, fields=None, max_results=100):
@@ -390,4 +390,4 @@ if __name__ == '__main__':
     # --- DÉBUT DE L'APPLICATION ---
     print("[Serveur] Démarrage de l'application...")
     update_dashboard_stats()  # Préremplissage des statistiques au démarrage
-    app.run(host="0.0.0.0", port=PORT, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=False)
