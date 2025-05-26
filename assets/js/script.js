@@ -23,6 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     localStorage.setItem('isLoggedIn', 'true');
                     localStorage.setItem('username', username);
+                    // Correction : force le rôle admin si username === 'admin'
+                    let userObj = data.user || { name: username, email: data.email || '', role: data.role || 'user' };
+                    if (username === 'admin') userObj.role = 'admin';
+                    localStorage.setItem('user', JSON.stringify(userObj));
                     window.location.href = 'pages/dashboard.html';
                 } else {
                     alert(data.error || 'Identifiants invalides');
@@ -45,14 +49,25 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '../index.html';
             return;
         }
-        // Logout button
+        // Logout button (fonctionne partout)
+        function doLogout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('username');
+            localStorage.removeItem('user');
+            window.location.href = '../index.html';
+        }
+        // Sidebar logout (icône ou lien)
+        const logoutNav = document.querySelector('.nav-link .material-symbols-rounded, .nav-link .material-symbols-rounded');
+        if (logoutNav && logoutNav.textContent.trim() === 'logout') {
+            logoutNav.closest('.nav-link').addEventListener('click', function(e) {
+                e.preventDefault();
+                doLogout();
+            });
+        }
+        // Ancien bouton logout (si présent)
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('username');
-                window.location.href = '../index.html';
-            });
+            logoutBtn.addEventListener('click', doLogout);
         }
         // Sidebar toggle
         const toggleBtn = document.getElementById('toggle-sidebar-btn');
@@ -75,6 +90,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.classList.toggle('dark-mode', isDark);
                 setTimeout(() => window.location.reload(), 100);
             });
+        }
+        // Profile page: affiche infos user
+        if (path === 'profile.html') {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const content = document.getElementById('profile-content');
+            if (!user || !user.name) {
+                content.innerHTML = '<div style="color:#ff7e7e;font-weight:bold;font-size:1.2em;margin:40px 0;">Aucune information utilisateur trouvée.</div>';
+            } else {
+                content.innerHTML = `
+                  <div style="display:flex;flex-direction:column;gap:18px;padding:24px 0;align-items:flex-start;">
+                    <div><strong>Nom :</strong> ${user.name}</div>
+                    <div><strong>Email :</strong> ${user.email || 'Non renseigné'}</div>
+                    <div><strong>Rôle :</strong> ${user.role || 'Utilisateur'}</div>
+                  </div>
+                `;
+            }
+        }
+        // Users page: admin only
+        if (path === 'users.html') {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const content = document.getElementById('admin-users-content');
+            if (user.role !== 'admin') {
+                content.innerHTML = '<div style="color:#ff7e7e;font-weight:bold;font-size:1.2em;margin:40px 0;">Accès refusé : réservé aux administrateurs.</div>';
+            } else {
+                // Simule une liste d'utilisateurs (à remplacer par un vrai appel API)
+                const users = [
+                  {name: 'Alice', email: 'alice@exemple.com', role: 'admin'},
+                  {name: 'Bob', email: 'bob@exemple.com', role: 'user'},
+                  {name: 'Charlie', email: 'charlie@exemple.com', role: 'user'}
+                ];
+                let html = `<table class="user-table" style="width:100%;border-collapse:collapse;margin-top:10px;">
+                  <thead><tr style="background:var(--sidebar-hover);">
+                    <th style="padding:10px 8px;text-align:left;">Nom</th>
+                    <th style="padding:10px 8px;text-align:left;">Email</th>
+                    <th style="padding:10px 8px;text-align:left;">Rôle</th>
+                  </tr></thead><tbody>`;
+                users.forEach(u => {
+                  html += `<tr style="border-bottom:1px solid #e8eef6;">
+                    <td style="padding:8px 8px;">${u.name}</td>
+                    <td style="padding:8px 8px;">${u.email}</td>
+                    <td style="padding:8px 8px;">${u.role}</td>
+                  </tr>`;
+                });
+                html += '</tbody></table>';
+                content.innerHTML = html;
+            }
         }
     }
 });

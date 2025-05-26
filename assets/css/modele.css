@@ -257,11 +257,12 @@ nav a[data-icon]::before {
 
 /* Styles for report generation form */
 .report-form {
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
+  background: var(--card-bg);
+  color: var(--sidebar-text);
+  border-radius: 16px;
   box-shadow: 0 2px 12px #0001;
-  max-width: 500px;
+  padding: 32px 28px;
+  width: 100%;
 }
 .report-form h3 {
   margin-top: 0;
@@ -275,13 +276,32 @@ nav a[data-icon]::before {
   align-items: center;
 }
 .report-form label {
-  font-size: 0.95em;
-  color: #232a36;
+  color: var(--sidebar-text);
+  font-weight: 500;
+  font-size: 1em;
 }
 .report-form input[type="month"] {
   padding: 6px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+.report-form input[type="radio"] {
+  accent-color: #7ecfff;
+  margin-right: 4px;
+}
+.report-form button {
+  background: #7ecfff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.report-form button:hover {
+  background: #5aaac9;
 }
 
 /* API error overlay */

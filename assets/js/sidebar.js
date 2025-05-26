@@ -60,3 +60,16 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ({m
   theme.value = isDark ? 'dark' : 'light';
   setPreference();
 });
+// Logout button handler (fonctionne partout, même si plusieurs boutons)
+document.querySelectorAll('.nav-link .material-symbols-rounded').forEach(icon => {
+  if (icon.textContent.trim() === 'logout') {
+    icon.closest('.nav-link').addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('username');
+      localStorage.removeItem('user');
+      // Redirige vers la page de login (ou index.html si pas de page login)
+      window.location.href = '../index.html';
+    });
+  }
+});

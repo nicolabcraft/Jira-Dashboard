@@ -26,19 +26,24 @@
   --icon-fill: #FFD600;
   --icon-fill-hover: #fffde4;
 }
-body {
+body, .main-bg {
   background: var(--main-bg);
-  color: var(--sidebar-text);
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .sidebar {
   position: fixed;
   width: 210px; /* réduit de 270px à 210px */
   margin: 16px;
   border-radius: 16px;
-  background: var(--sidebar-bg);
+  background: var(--sidebar-bg) !important;
   color: var(--sidebar-text);
   height: calc(100vh - 32px);
   transition: all 0.4s ease;
+  overflow: hidden;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
 }
 .sidebar.collapsed {
   width: 70px; /* réduit de 85px à 70px */
