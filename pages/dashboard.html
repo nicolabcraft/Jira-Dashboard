@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/modele.css">
     <link rel="stylesheet" href="../assets/css/sidebar.css">
-    <link href='https://unpkg.com/boxicons@2.1.1/css/boxicons.min.css' rel='stylesheet'>
     <link rel="icon" href="../assets/img/favicon.png">
     <script>
         window.API_BASE = 'http://127.0.0.1:5000';
@@ -17,123 +16,145 @@
     <script src="../assets/js/script.js" defer></script>
     <script src="../assets/js/overlay.js" defer></script>
     <script src="../assets/js/sidebar.js" defer></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
 </head>
 <body>
-<div class="layout">
-    <nav class="sidebar close">
-        <header>
-            <div class="image-text">
-                <span class="image">
-                    <img src="../assets/img/logo-large.png" alt="Logo">
-                </span>
-                <div class="text logo-text">
-                    <span class="name">Jira Dashboard</span>
-                    <span class="profession">Admin</span>
-                </div>
-            </div>
-            <i class='bx bx-chevron-right toggle'></i>
-        </header>
-        <div class="menu-bar">
-            <div class="menu">
-                <li class="search-box">
-                    <i class='bx bx-search icon'></i>
-                    <input type="text" placeholder="Search...">
-                </li>
-                <ul class="menu-links">
-                    <li class="nav-link"><a href="dashboard.html"><i class='bx bx-home-alt icon'></i><span class="text nav-text">Dashboard</span></a></li>
-                    <li class="nav-link"><a href="tickets.html"><i class='bx bx-bar-chart-alt-2 icon'></i><span class="text nav-text">Tickets</span></a></li>
-                    <li class="nav-link"><a href="rapports.html"><i class='bx bx-pie-chart-alt icon'></i><span class="text nav-text">Rapports</span></a></li>
-                    <li class="nav-link"><a href="users.html"><i class='bx bx-user icon'></i><span class="text nav-text">Utilisateurs</span></a></li>
-                </ul>
-            </div>
-            <div class="bottom-content">
-                <li><a href="#" id="logout-btn"><i class='bx bx-log-out icon'></i><span class="text nav-text">Logout</span></a></li>
-                <li class="mode">
-                    <div class="sun-moon">
-                        <i class='bx bx-moon icon moon'></i>
-                        <i class='bx bx-sun icon sun'></i>
-                    </div>
-                    <span class="mode-text text">Dark mode</span>
-                    <div class="toggle-switch"><span class="switch"></span></div>
-                </li>
-            </div>
-        </div>
+  <aside class="sidebar">
+    <header class="sidebar-header">
+      <a href="#" class="header-logo">
+        <img src="../assets/img/logo-large.png" alt="Logo">
+      </a>
+      <button class="toggler sidebar-toggler">
+        <span class="material-symbols-rounded">chevron_left</span>
+      </button>
+      <button class="toggler menu-toggler">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+    </header>
+    <nav class="sidebar-nav">
+      <ul class="nav-list primary-nav">
+        <li class="nav-item">
+          <a href="dashboard.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">dashboard</span>
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <span class="nav-tooltip">Dashboard</span>
+        </li>
+        <li class="nav-item">
+          <a href="tickets.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">confirmation_number</span>
+            <span class="nav-label">Tickets</span>
+          </a>
+          <span class="nav-tooltip">Tickets</span>
+        </li>
+        <li class="nav-item">
+          <a href="rapports.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">bar_chart</span>
+            <span class="nav-label">Rapports</span>
+          </a>
+          <span class="nav-tooltip">Rapports</span>
+        </li>
+        <li class="nav-item">
+          <a href="users.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">group</span>
+            <span class="nav-label">Utilisateurs</span>
+          </a>
+          <span class="nav-tooltip">Utilisateurs</span>
+        </li>
+      </ul>
+      <ul class="nav-list secondary-nav">
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">account_circle</span>
+            <span class="nav-label">Profile</span>
+          </a>
+          <span class="nav-tooltip">Profile</span>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">logout</span>
+            <span class="nav-label">Logout</span>
+          </a>
+          <span class="nav-tooltip">Logout</span>
+        </li>
+      </ul>
     </nav>
-    <main class="main">
-        <div class="dashboard-title">Vue d'ensemble - Jira</div>
-        <div class="dashboard-row">
-            <div class="card">
-                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-                    <div style="flex:1;text-align:center;">
-                        <h2>Nombre de tickets</h2>
-                        <div class="kpi" id="kpi-total">...</div>
-                    </div>
-                    <div style="width:1px;height:60px;background:#e8eef6;"></div>
-                    <div style="flex:1;text-align:center;">
-                        <h2>Tickets résolus</h2>
-                        <div class="kpi" id="kpi-resolved">...</div>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-                    <div style="flex:1;text-align:center;">
-                        <h2>Relance Envoyée</h2>
-                        <div class="kpi" id="kpi-relaunched">...</div>
-                        <div style="font-size:0.9em;display:flex;align-items:center;justify-content:center;gap:4px;">
-                            <img src="../assets/img/up.svg" alt="Relance Envoyée" style="width:16px;height:16px;"/>
-                            <span>Relance Envoyée</span>
-                        </div>
-                    </div>
-                    <div style="width:1px;height:60px;background:#e8eef6;"></div>
-                    <div style="flex:1;text-align:center;">
-                        <h2>Ticket Clôturé</h2>
-                        <div class="kpi" id="kpi-closed">...</div>
-                        <div style="font-size:0.9em;display:flex;align-items:center;justify-content:center;gap:4px;">
-                            <img src="../assets/img/down.svg" alt="Ticket Clôturé" style="width:16px;height:16px;"/>
-                            <span>Ticket Clôturé</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <h2>Santé du support</h2>
-                <div class="support-health-container">
-                    <div class="weather-row" id="weather-row">
-                        <span class="weather-icon" data-index="0">☀️</span>
-                        <span class="weather-icon" data-index="1">☁️</span>
-                        <span class="weather-icon" data-index="2">🌧️</span>
-                        <span class="weather-icon" data-index="3">⛈️</span>
-                    </div>
-                </div>
-            </div>
+  </aside>
+  <main class="main">
+    <div class="dashboard-title">Vue d'ensemble - Jira</div>
+    <div class="dashboard-row">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+          <div style="flex:1;text-align:center;">
+            <h2>Nombre de tickets</h2>
+            <div class="kpi" id="kpi-total">...</div>
+          </div>
+          <div style="width:1px;height:60px;background:#e8eef6;"></div>
+          <div style="flex:1;text-align:center;">
+            <h2>Tickets résolus</h2>
+            <div class="kpi" id="kpi-resolved">...</div>
+          </div>
         </div>
-        <div class="dashboard-row">
-            <div class="card card-full-height">                <h2>Tickets créés vs résolus (30 jours)</h2>
-                <canvas id="chart-created-resolved" style="width:100%;height:160px;background:#e8eef6;border-radius:8px;"></canvas>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+          <div style="flex:1;text-align:center;">
+            <h2>Relance Envoyée</h2>
+            <div class="kpi" id="kpi-relaunched">...</div>
+            <div style="font-size:0.9em;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <img src="../assets/img/up.svg" alt="Relance Envoyée" style="width:16px;height:16px;"/>
+              <span>Relance Envoyée</span>
             </div>
-            <div class="card">
-                <h2>Tickets par statut (30 jours)</h2>
-                <canvas id="chart-status" style="width:100%;height:160px;background:#e8eef6;border-radius:8px;"></canvas>
+          </div>
+          <div style="width:1px;height:60px;background:#e8eef6;"></div>
+          <div style="flex:1;text-align:center;">
+            <h2>Ticket Clôturé</h2>
+            <div class="kpi" id="kpi-closed">...</div>
+            <div style="font-size:0.9em;display:flex;align-items:center;justify-content:center;gap:4px;">
+              <img src="../assets/img/down.svg" alt="Ticket Clôturé" style="width:16px;height:16px;"/>
+              <span>Ticket Clôturé</span>
             </div>
-            <div class="card">
-                <h2>Charge de travail (30 jours)</h2>
-                <div class="team-list" id="leaderboard">
-                    <!-- JS -->
-                </div>
-            </div>
+          </div>
         </div>
-        <div class="dashboard-row">
-            <div class="card">
-                <h2>Tickets par pôle (30 jours)</h2>
-                <canvas id="chart-department" style="width:100%;height:180px;background:#e8eef6;border-radius:8px;"></canvas>
-            </div>
-            <div class="card">
-                <h2>Tickets par étiquette (30 jours)</h2>
-                <canvas id="chart-label" style="width:100%;height:180px;background:#e8eef6;border-radius:8px;"></canvas>
-            </div>
+      </div>
+      <div class="card">
+        <h2>Santé du support</h2>
+        <div class="support-health-container">
+          <div class="weather-row" id="weather-row">
+            <span class="weather-icon" data-index="0">☀️</span>
+            <span class="weather-icon" data-index="1">☁️</span>
+            <span class="weather-icon" data-index="2">🌧️</span>
+            <span class="weather-icon" data-index="3">⛈️</span>
+          </div>
         </div>
-    </main>
-</div>
+      </div>
+    </div>
+    <div class="dashboard-row">
+      <div class="card card-full-height">
+        <h2>Tickets créés vs résolus (30 jours)</h2>
+        <canvas id="chart-created-resolved" style="width:100%;height:160px;background:#e8eef6;border-radius:8px;"></canvas>
+      </div>
+      <div class="card">
+        <h2>Tickets par statut (30 jours)</h2>
+        <canvas id="chart-status" style="width:100%;height:160px;background:#e8eef6;border-radius:8px;"></canvas>
+      </div>
+      <div class="card">
+        <h2>Charge de travail (30 jours)</h2>
+        <div class="team-list" id="leaderboard">
+          <!-- JS -->
+        </div>
+      </div>
+    </div>
+    <div class="dashboard-row">
+      <div class="card">
+        <h2>Tickets par pôle (30 jours)</h2>
+        <canvas id="chart-department" style="width:100%;height:180px;background:#e8eef6;border-radius:8px;"></canvas>
+      </div>
+      <div class="card">
+        <h2>Tickets par étiquette (30 jours)</h2>
+        <canvas id="chart-label" style="width:100%;height:180px;background:#e8eef6;border-radius:8px;"></canvas>
+      </div>
+    </div>
+  </main>
 </body>
 </html>
