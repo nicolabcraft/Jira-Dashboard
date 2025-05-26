@@ -246,13 +246,14 @@ def user_to_dict(user):
     return {
         "id": str(user.get("_id")),
         "username": user.get("username", ""),
-        "password": user.get("password", ""),
-        "name": user.get("nom") or user.get("name") or user.get("username", ""),
+        # "password": user.get("password", ""),  # NE PAS exposer le mot de passe !
+        "name": user.get("name") or user.get("nom") or user.get("username", ""),
         "prenom": user.get("prenom", ""),
         "email": user.get("email", ""),
         "type_connexion": user.get("type_connexion", ""),
         "role": user.get("role", "user")
     }
+
 # --- ROUTES QUI LISENT LA DB ---
 @app.route('/api/kpis')
 def api_kpis():
@@ -423,7 +424,7 @@ def login():
     user = users_collection.find_one({'username': username, 'password': password})
     if user:
         session['user'] = username
-        return jsonify({'success': True, 'username': username})
+        return jsonify({'success': True, 'user': user_to_dict(user)})
     return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
 
 @app.route('/api/logout')
@@ -432,10 +433,21 @@ def logout():
     return jsonify({'success': True})
 
 @app.route('/api/user')
-def get_user():
-    if 'user' in session:
+def get_current_user():
+    if 'user' not in session:
+        return jsonify({'error': 'Non authentifié'}), 401
+    # Cherche par username OU email (pour compatibilité SSO et comptes locaux)
+    user = users_collection.find_one({
+        '$or': [
+            {'username': session['user']},
+            {'email': session['user']}
+        ]
+    })
+    if not user:
+        # Si aucun user trouvé, retourne au moins le username pour compatibilité
+        print('[API /api/user] Aucun utilisateur trouvé, retour minimal')
         return jsonify({'username': session['user']})
-    return jsonify({'username': None}), 401
+    return jsonify(user_to_dict(user))
 
 # --- Google SSO ---
 def get_google_provider_cfg():
@@ -482,18 +494,18 @@ def get_users():
 @app.route('/api/users', methods=['POST'])
 def add_user():
     data = request.json
-    # Validate required fields
-    required_fields = ["nom", "prenom", "email", "username", "password", "type_connexion", "role"]
+    # Champs requis minimum
+    required_fields = ["name", "email", "username", "password", "role"]
     for field in required_fields:
         if not data.get(field):
             return jsonify({"error": f"Champ '{field}' requis"}), 400
     user = {
-        "nom": data["nom"],
-        "prenom": data["prenom"],
+        "name": data["name"],
+        "prenom": data.get("prenom", ""),
         "email": data["email"],
         "username": data["username"],
         "password": data["password"],
-        "type_connexion": data["type_connexion"],
+        "type_connexion": data.get("type_connexion", ""),
         "role": data["role"]
     }
     result = users_collection.insert_one(user)
@@ -504,9 +516,12 @@ def add_user():
 def update_user(user_id):
     data = request.json
     update = {}
-    for field in ["nom", "prenom", "email", "username", "password", "type_connexion", "role"]:
-        if field in data:
+    for field in ["name", "prenom", "email", "username", "type_connexion", "role"]:
+        if field in data and data[field] != "":
             update[field] = data[field]
+    # Password: only update if provided and not empty
+    if "password" in data and data["password"]:
+        update["password"] = data["password"]
     if not update:
         return jsonify({"error": "Aucune donnée à mettre à jour"}), 400
     users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": update})

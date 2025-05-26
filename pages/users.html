@@ -105,16 +105,20 @@
         <div id="user-form-container" style="display:none;margin-top:24px;">
           <form id="user-form" style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
             <input type="hidden" id="user-id">
-            <label>Nom <input type="text" id="user-name" required></label>
-            <label>Prénom <input type="text" id="user-prenom"></label>
-            <label>Email <input type="email" id="user-email" required></label>
-            <label>Nom d'utilisateur <input type="text" id="user-username"></label>
-            <label>Mot de passe <input type="text" id="user-password"></label>
+            <label>ID <input type="text" id="user-id-view" name="id" readonly style="background:#f3f3f3;color:#888;"></label>
+            <label>Nom <input type="text" id="user-name" name="name" required></label>
+            <label>Prénom <input type="text" id="user-prenom" name="prenom"></label>
+            <label>Email <input type="email" id="user-email" name="email" required></label>
+            <label>Nom d'utilisateur <input type="text" id="user-username" name="username"></label>
+            <label>Mot de passe <input type="text" id="user-password" name="password"></label>
             <label>Type de connexion
-              <input type="text" id="user-type_connexion">
+              <select id="user-type_connexion" name="type_connexion">
+                <option value="Local">Local</option>
+                <option value="SSO-Google">SSO-Google</option>
+              </select>
             </label>
             <label>Rôle
-              <select id="user-role">
+              <select id="user-role" name="role">
                 <option value="user">Utilisateur</option>
                 <option value="admin">Admin</option>
               </select>

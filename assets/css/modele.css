@@ -616,3 +616,8 @@ body.dark-mode .weather-row .weather-icon.selected {
     font-size: 0.98em;
   }
 }
+
+.input-error {
+  border: 2px solid #ff7e7e !important;
+  background: #fff6f6;
+}
