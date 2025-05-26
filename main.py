@@ -15,6 +15,7 @@ import threading
 import time
 from oauthlib.oauth2 import WebApplicationClient
 from bson import ObjectId
+import bcrypt
 
 load_dotenv()  # charge les variables depuis .env
 
@@ -421,11 +422,13 @@ def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    user = users_collection.find_one({'username': username, 'password': password})
-    if user:
-        session['user'] = username
-        return jsonify({'success': True, 'user': user_to_dict(user)})
-    return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+    user = users_collection.find_one({'username': username})
+    if user and 'password' in user:
+        if bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+            session['user'] = username
+            return jsonify({'success': True, 'user': user_to_dict(user)})
+    # Toujours le même message pour éviter l'énumération
+    return jsonify({'success': False, 'error': 'Identifiants invalides'}), 401
 
 @app.route('/api/logout')
 def logout():
@@ -494,17 +497,18 @@ def get_users():
 @app.route('/api/users', methods=['POST'])
 def add_user():
     data = request.json
-    # Champs requis minimum
     required_fields = ["name", "email", "username", "password", "role"]
     for field in required_fields:
         if not data.get(field):
             return jsonify({"error": f"Champ '{field}' requis"}), 400
+    # Hash du mot de passe
+    hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     user = {
         "name": data["name"],
         "prenom": data.get("prenom", ""),
         "email": data["email"],
         "username": data["username"],
-        "password": data["password"],
+        "password": hashed,
         "type_connexion": data.get("type_connexion", ""),
         "role": data["role"]
     }
@@ -521,16 +525,23 @@ def update_user(user_id):
             update[field] = data[field]
     # Password: only update if provided and not empty
     if "password" in data and data["password"]:
-        update["password"] = data["password"]
+        hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        update["password"] = hashed
     if not update:
         return jsonify({"error": "Aucune donnée à mettre à jour"}), 400
-    users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": update})
+    try:
+        users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": update})
+    except Exception:
+        return jsonify({"error": "ID utilisateur invalide"}), 400
     user = users_collection.find_one({"_id": ObjectId(user_id)})
     return jsonify(user_to_dict(user))
 
 @app.route('/api/users/<user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    users_collection.delete_one({"_id": ObjectId(user_id)})
+    try:
+        users_collection.delete_one({"_id": ObjectId(user_id)})
+    except Exception:
+        return jsonify({"error": "ID utilisateur invalide"}), 400
     return jsonify({"success": True})
 
 if __name__ == '__main__':
