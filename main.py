@@ -6,11 +6,8 @@ from dotenv import load_dotenv
 import os
 import requests
 from requests_oauthlib import OAuth2Session
-import json
 from datetime import datetime, timedelta
 from collections import Counter, defaultdict
-from functools import lru_cache
-from time import time
 import threading
 import time
 from oauthlib.oauth2 import WebApplicationClient
@@ -424,10 +421,27 @@ def login():
     password = data.get('password')
     user = users_collection.find_one({'username': username})
     if user and 'password' in user:
-        if bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
-            session['user'] = username
-            return jsonify({'success': True, 'user': user_to_dict(user)})
-    # Toujours le même message pour éviter l'énumération
+        stored_pw = user['password']
+        # Handle both str and bytes
+        if isinstance(stored_pw, bytes):
+            stored_pw_str = stored_pw.decode('utf-8')
+        else:
+            stored_pw_str = stored_pw
+        # If already bcrypt hash
+        if stored_pw_str.startswith('$2a$') or stored_pw_str.startswith('$2b$'):
+            stored_pw_bytes = stored_pw_str.encode('utf-8')
+            if bcrypt.checkpw(password.encode('utf-8'), stored_pw_bytes):
+                session['user'] = username
+                return jsonify({'success': True, 'user': user_to_dict(user)})
+        else:
+            # Legacy: plaintext password in DB
+            if password == stored_pw_str:
+                # Upgrade: hash and store
+                hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                users_collection.update_one({'_id': user['_id']}, {'$set': {'password': hashed}})
+                session['user'] = username
+                return jsonify({'success': True, 'user': user_to_dict(user)})
+    # Message neutre pour éviter l'énumération
     return jsonify({'success': False, 'error': 'Identifiants invalides'}), 401
 
 @app.route('/api/logout')
@@ -530,22 +544,24 @@ def update_user(user_id):
     if not update:
         return jsonify({"error": "Aucune donnée à mettre à jour"}), 400
     try:
-        users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": update})
+        # Vérification stricte de l'ObjectId
+        oid = ObjectId(user_id)
+        users_collection.update_one({"_id": oid}, {"$set": update})
+        user = users_collection.find_one({"_id": oid})
     except Exception:
         return jsonify({"error": "ID utilisateur invalide"}), 400
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
     return jsonify(user_to_dict(user))
 
 @app.route('/api/users/<user_id>', methods=['DELETE'])
 def delete_user(user_id):
     try:
-        users_collection.delete_one({"_id": ObjectId(user_id)})
+        oid = ObjectId(user_id)
+        users_collection.delete_one({"_id": oid})
     except Exception:
         return jsonify({"error": "ID utilisateur invalide"}), 400
     return jsonify({"success": True})
 
 if __name__ == '__main__':
-    # --- CHARGEMENT DES VARIABLES D'ENVIRONNEMENT ---
     load_dotenv()
     PORT = int(os.getenv("PORT", 5000))
     # --- DÉBUT DE L'APPLICATION ---
