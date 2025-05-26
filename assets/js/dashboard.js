@@ -496,62 +496,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     updateLabel();    // setInterval(updateLabel, 60000); // SUPPRIMÉ
 
-    // --- Rafraîchissement automatique paramétrable par l'utilisateur ---
-    let refreshInterval = 60; // valeur par défaut en secondes
-    let refreshTimer = null;
-
-    function setRefreshInterval(seconds) {
-        refreshInterval = seconds;
-        if (refreshTimer) clearInterval(refreshTimer);
-        // Stocker la préférence utilisateur
-        localStorage.setItem('refresh_interval', seconds);
-        // Mettre à jour l'input
-        const input = document.getElementById('refresh-interval');
-        if (input) input.value = seconds;
-        // Démarrer le nouveau timer
-        refreshTimer = setInterval(refreshAllBlocks, seconds * 1000);
-        console.log(`[Refresh] Intervalle mis à jour : ${seconds} secondes`);
-    }
-
-    // Ajoute un input pour choisir l'intervalle de rafraîchissement
-    function addRefreshIntervalInput() {
-        const container = document.createElement('div');
-        container.style = 'position:fixed;top:16px;right:32px;z-index:1000;background:#fff;padding:8px 16px;border-radius:8px;box-shadow:0 2px 8px #0001;font-size:1em;';
-        
-        // Récupérer la dernière valeur sauvegardée ou utiliser la valeur par défaut
-        const savedInterval = parseInt(localStorage.getItem('refresh_interval'), 10) || 60;
-        refreshInterval = savedInterval;
-        
-        container.innerHTML = `⟳ Rafraîchissement : <input id="refresh-interval" type="number" min="10" max="600" value="${savedInterval}" style="width:60px;"> s`;
-        document.body.appendChild(container);
-        
-        const input = document.getElementById('refresh-interval');
-        input.addEventListener('change', e => {
-            let v = parseInt(e.target.value, 10);
-            if (isNaN(v) || v < 10) v = 10;
-            if (v > 600) v = 600;
-            e.target.value = v;
-            setRefreshInterval(v);
-        });
-        
-        // Activer le rafraîchissement initial avec la valeur sauvegardée
-        setRefreshInterval(savedInterval);
-    }
-
-    // Rafraîchit tous les blocs (données dynamiques)
-    function refreshAllBlocks() {        updateStatusBlock();
-        updateDepartment();
-        updateLabel();
-        updateCreatedVsResolved();
-    }
-
     // --- Initialisation ---
-    // Ajout du bouton de rafraîchissement
-    addRefreshIntervalInput();
     // Premier chargement
     refreshAllBlocks();
-    // Configuration du timer
-    setRefreshInterval(refreshInterval);
+    // Auto-refresh toutes les 60 secondes
+    setInterval(refreshAllBlocks, 60000);
 });
 
 // Force high DPI for crisp rendering
