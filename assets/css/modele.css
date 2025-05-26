@@ -558,3 +558,61 @@ body.dark-mode .weather-row .weather-icon.selected {
   line-height: 1rem;
   color: rgba(156, 163, 175, 1);
 }
+
+.users-table {
+  width: 100%;
+  table-layout: auto;
+  min-width: 500px;
+  background: transparent;
+  border-collapse: collapse;
+}
+.users-table th, .users-table td {
+  padding: 14px 12px;
+  text-align: left;
+}
+.users-table th {
+  background: var(--sidebar-hover, #2c3140);
+  color: #fff;
+  font-weight: 600;
+}
+.users-table td {
+  color: #fff;
+  background: transparent;
+}
+.users-table th:last-child,
+.users-table td:last-child {
+  width: 130px;
+  min-width: 110px;
+  text-align: center;
+}
+.users-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+.users-action-btn {
+  background: #6ec6ff;
+  color: #232b3b;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.04);
+}
+.users-action-btn:hover {
+  background: #2196f3;
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .users-table {
+    min-width: 350px;
+    font-size: 0.98em;
+  }
+}

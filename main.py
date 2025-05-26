@@ -14,6 +14,7 @@ from time import time
 import threading
 import time
 from oauthlib.oauth2 import WebApplicationClient
+from bson import ObjectId
 
 load_dotenv()  # charge les variables depuis .env
 
@@ -241,6 +242,17 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     if return_data:
         return stats
 
+def user_to_dict(user):
+    return {
+        "id": str(user.get("_id")),
+        "username": user.get("username", ""),
+        "password": user.get("password", ""),
+        "name": user.get("nom") or user.get("name") or user.get("username", ""),
+        "prenom": user.get("prenom", ""),
+        "email": user.get("email", ""),
+        "type_connexion": user.get("type_connexion", ""),
+        "role": user.get("role", "user")
+    }
 # --- ROUTES QUI LISENT LA DB ---
 @app.route('/api/kpis')
 def api_kpis():
@@ -461,6 +473,50 @@ def google_callback():
 @app.route('/')
 def serve_index():
     return app.send_static_file('index.html')
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    users = list(users_collection.find())
+    return jsonify([user_to_dict(u) for u in users])
+
+@app.route('/api/users', methods=['POST'])
+def add_user():
+    data = request.json
+    # Validate required fields
+    required_fields = ["nom", "prenom", "email", "username", "password", "type_connexion", "role"]
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({"error": f"Champ '{field}' requis"}), 400
+    user = {
+        "nom": data["nom"],
+        "prenom": data["prenom"],
+        "email": data["email"],
+        "username": data["username"],
+        "password": data["password"],
+        "type_connexion": data["type_connexion"],
+        "role": data["role"]
+    }
+    result = users_collection.insert_one(user)
+    user["_id"] = result.inserted_id
+    return jsonify(user_to_dict(user)), 201
+
+@app.route('/api/users/<user_id>', methods=['PUT'])
+def update_user(user_id):
+    data = request.json
+    update = {}
+    for field in ["nom", "prenom", "email", "username", "password", "type_connexion", "role"]:
+        if field in data:
+            update[field] = data[field]
+    if not update:
+        return jsonify({"error": "Aucune donnée à mettre à jour"}), 400
+    users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": update})
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    return jsonify(user_to_dict(user))
+
+@app.route('/api/users/<user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    users_collection.delete_one({"_id": ObjectId(user_id)})
+    return jsonify({"success": True})
 
 if __name__ == '__main__':
     # --- CHARGEMENT DES VARIABLES D'ENVIRONNEMENT ---

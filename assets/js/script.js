@@ -109,33 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Users page: admin only
         if (path === 'users.html') {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const content = document.getElementById('admin-users-content');
-            if (user.role !== 'admin') {
-                content.innerHTML = '<div style="color:#ff7e7e;font-weight:bold;font-size:1.2em;margin:40px 0;">Accès refusé : réservé aux administrateurs.</div>';
-            } else {
-                // Simule une liste d'utilisateurs (à remplacer par un vrai appel API)
-                const users = [
-                  {name: 'Alice', email: 'alice@exemple.com', role: 'admin'},
-                  {name: 'Bob', email: 'bob@exemple.com', role: 'user'},
-                  {name: 'Charlie', email: 'charlie@exemple.com', role: 'user'}
-                ];
-                let html = `<table class="user-table" style="width:100%;border-collapse:collapse;margin-top:10px;">
-                  <thead><tr style="background:var(--sidebar-hover);">
-                    <th style="padding:10px 8px;text-align:left;">Nom</th>
-                    <th style="padding:10px 8px;text-align:left;">Email</th>
-                    <th style="padding:10px 8px;text-align:left;">Rôle</th>
-                  </tr></thead><tbody>`;
-                users.forEach(u => {
-                  html += `<tr style="border-bottom:1px solid #e8eef6;">
-                    <td style="padding:8px 8px;">${u.name}</td>
-                    <td style="padding:8px 8px;">${u.email}</td>
-                    <td style="padding:8px 8px;">${u.role}</td>
-                  </tr>`;
-                });
-                html += '</tbody></table>';
-                content.innerHTML = html;
-            }
+            // Do nothing here! users.js handles all user management and rendering.
         }
     }
 });

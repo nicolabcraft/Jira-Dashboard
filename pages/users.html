@@ -49,7 +49,7 @@
           <span class="nav-tooltip">Rapports</span>
         </li>
         <li class="nav-item">
-          <a href="users.html" class="nav-link active">
+          <a href="users.html" class="nav-link">
             <span class="nav-icon material-symbols-rounded">group</span>
             <span class="nav-label">Utilisateurs</span>
           </a>
@@ -100,10 +100,34 @@
     <div class="dashboard-row">
       <div class="card" style="width:100%;max-width:700px;margin:auto;">
         <div id="admin-users-content">
-          <!-- JS: Affiche la liste des utilisateurs si admin, sinon message d'accès refusé -->
+          <!-- La table des utilisateurs et les boutons Actions sont générés dynamiquement par users.js -->
+        </div>
+        <div id="user-form-container" style="display:none;margin-top:24px;">
+          <form id="user-form" style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
+            <input type="hidden" id="user-id">
+            <label>Nom <input type="text" id="user-name" required></label>
+            <label>Prénom <input type="text" id="user-prenom"></label>
+            <label>Email <input type="email" id="user-email" required></label>
+            <label>Nom d'utilisateur <input type="text" id="user-username"></label>
+            <label>Mot de passe <input type="text" id="user-password"></label>
+            <label>Type de connexion
+              <input type="text" id="user-type_connexion">
+            </label>
+            <label>Rôle
+              <select id="user-role">
+                <option value="user">Utilisateur</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <div style="display:flex;gap:8px;">
+              <button type="submit" id="save-user-btn">Enregistrer</button>
+              <button type="button" id="cancel-user-btn">Annuler</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   </main>
+  <script src="../assets/js/users.js"></script>
 </body>
 </html>
