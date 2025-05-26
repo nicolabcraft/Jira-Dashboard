@@ -62,13 +62,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     const pct = kpis.support_health;
     const icons = document.querySelectorAll('#weather-row .weather-icon');
     let idx = pct >= 80 ? 0 : pct >= 60 ? 1 : pct >= 30 ? 2 : 3;
+    // Define background colors for each health status
+    const healthColors = [
+        'var(--health-good, #7fff7e)',      // Good (green)
+        'var(--health-fair, #ffe066)',      // Fair (yellow)
+        'var(--health-warning, #ffb347)',   // Warning (orange)
+        'var(--health-bad, #ff7e7e)'        // Bad (red)
+    ];
     icons.forEach((el, i) => {
         if (i === idx) {
-            el.classList.add('selected');
-            const colors = ['#7fff7e','#7ecfff','#ffb347','#ff7e7e'];
-            el.style.color = colors[i];
+            el.style.background = 'none';
+            el.style.border = `3px solid ${healthColors[idx]}`;
+            el.style.borderRadius = '10px';
+            el.style.boxShadow = 'none';
         } else {
-            el.classList.remove('selected'); el.style.color = ''; }
+            el.style.background = 'none';
+            el.style.border = 'none';
+            el.style.boxShadow = 'none';
+        }
     });
     // Workload leaderboard
     const workload = kpis.workload || kpis.leaderboard || [];

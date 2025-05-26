@@ -17,12 +17,12 @@
   --icon-fill-hover: #FFB300;
 }
 [data-theme="dark"] {
-  --sidebar-bg: #23263a;
+  --sidebar-bg: #2b2f42; /* un peu plus foncé qu'avant */
   --sidebar-text: #e0e0e0;
-  --sidebar-hover: #2d314d;
+  --sidebar-hover: #353a4d;
   --sidebar-hover-text: #FFD600;
   --main-bg: linear-gradient(#23263a, #151A2D);
-  --card-bg: #23263a;
+  --card-bg: #2f3347; /* un peu moins clair qu'avant, mais plus visible que le fond */
   --icon-fill: #FFD600;
   --icon-fill-hover: #fffde4;
 }
