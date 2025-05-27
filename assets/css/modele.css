@@ -149,6 +149,7 @@ button:active {
   display: flex;
   flex-wrap: wrap;
   gap: 32px;
+  width: 100%;
 }
 
 .card {
@@ -562,8 +563,8 @@ body.dark-mode .weather-row .weather-icon.selected {
 }
 
 .users-table {
-  width: 100%;
-  table-layout: auto;
+  width: 100%; /* Prend toute la largeur disponible */
+  table-layout: fixed; /* Assure que les colonnes respectent les largeurs définies */
   min-width: 100%;
   background: transparent;
   border-collapse: collapse;
@@ -571,6 +572,9 @@ body.dark-mode .weather-row .weather-icon.selected {
 .users-table th, .users-table td {
   padding: 14px 12px;
   text-align: left;
+  width: 20%; /* Distribue la largeur également entre les 5 colonnes */
+  word-break: break-all; /* Permet de couper les mots longs si nécessaire */
+  white-space: normal; /* Permet au texte de passer à la ligne */
 }
 .users-table th {
   background: var(--sidebar-hover, #2c3140);
@@ -631,7 +635,7 @@ body.dark-mode .weather-row .weather-icon.selected {
 }
 .users-table th:first-child,
 .users-table td:first-child {
-  max-width: 220px;
+  /* max-width: 220px; Supprimé pour permettre une largeur égale */
   word-break: break-all;
   white-space: normal;
 }
