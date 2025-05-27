@@ -572,12 +572,18 @@ body.dark-mode .weather-row .weather-icon.selected {
 }
 .users-table th {
   background: var(--sidebar-hover, #2c3140);
-  color: #fff;
+  color: var(--sidebar-text);
   font-weight: 600;
 }
-.users-table td {
+[data-theme="dark"] .users-table th {
   color: #fff;
+}
+.users-table td {
+  color: var(--sidebar-text);
   background: transparent;
+}
+[data-theme="dark"] .users-table td {
+  color: #fff;
 }
 .users-table th:last-child,
 .users-table td:last-child {
