@@ -73,3 +73,18 @@ document.querySelectorAll('.nav-link .material-symbols-rounded').forEach(icon =>
     });
   }
 });
+// --- GARDER L'ÉTAT DE LA SIDEBAR ENTRE LES PAGES ---
+const sidebarStateKey = 'sidebar-collapsed';
+// Appliquer l'état sauvegardé au chargement
+if (localStorage.getItem(sidebarStateKey) === 'true') {
+  sidebar.classList.add('collapsed');
+  // Forcer l'affichage des icônes si la sidebar est fermée
+  document.querySelectorAll('.nav-link .nav-icon').forEach(icon => {
+    icon.style.display = 'inline-flex';
+  });
+}
+// Sauvegarder l'état à chaque toggle
+sidebarToggler.addEventListener('click', () => {
+  const isCollapsed = sidebar.classList.contains('collapsed');
+  localStorage.setItem(sidebarStateKey, isCollapsed);
+});
