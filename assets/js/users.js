@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!Array.isArray(users)) throw new Error('Format API invalide');
       let html = `<table class="users-table">
         <thead><tr>
+          <th>ID</th>
           <th>Nom</th>
           <th>Email</th>
           <th>Rôle</th>
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </tr></thead><tbody>`;
       users.forEach(u => {
         html += `<tr>
+          <td>${u.id || ''}</td>
           <td>${u.name || u.username || u.email || ''}</td>
           <td>${u.email || ''}</td>
           <td>${u.role || ''}</td>

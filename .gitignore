@@ -177,3 +177,8 @@ cython_debug/
 .vscode/
 *.code-workspace
 .pre-commit-config.yaml
+
+#GitHub Codespaces
+README.md
+SECURITY.md
+*.md
