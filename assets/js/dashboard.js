@@ -287,10 +287,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             showError('Erreur de chargement des statuts', '#chart-status');
             return;
         }
-        
+
         const card = document.getElementById('chart-status')?.parentElement;
         if (!card) return;
-        
+
         // Crée ou cible le conteneur pour les barres
         let barsDiv = card.querySelector('#status-bars');
         if (!barsDiv) {
@@ -298,10 +298,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             barsDiv.id = 'status-bars';
             card.appendChild(barsDiv);
         }
-        
+
         // Utilise la dernière donnée connue si la réponse est vide
         const dataToDisplay = (statusDataRaw && Object.keys(statusDataRaw).length > 0) ? statusDataRaw : lastStatusData;
-        
+
         if (dataToDisplay && Object.keys(dataToDisplay).length > 0) {
             const statusLabels = Object.keys(dataToDisplay);
             const statusValues = Object.values(dataToDisplay);
