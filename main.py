@@ -130,21 +130,60 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     tickets_resolved = len(resolved_tickets)
     print(f"[Jira] Tickets résolus (30j): {tickets_resolved}")
     support_health = int((tickets_resolved / total_tickets) * 100) if total_tickets else 0
-    support_health_label = 'Bon' if support_health >= 70 else 'Moyen' if support_health >= 40 else 'Critique'
+    if support_health >= 80:
+        support_health_label = 'Good'
+    elif support_health >= 60:
+        support_health_label = 'Fair'
+    elif support_health >= 40:
+        support_health_label = 'Warning'
+    elif support_health >= 20:
+        support_health_label = 'Bad'
+    else:
+        support_health_label = 'Critical'
     objectif = 500
     progress = int((tickets_resolved / objectif) * 100) if objectif else 0
-    leaderboard = []
-    resolved_by_user = {}
-    for ticket in resolved_tickets:
-        assignee = ticket['fields'].get('assignee')
-        if assignee and isinstance(assignee, dict):
-            name = assignee.get('displayName') or assignee.get('name') or assignee.get('emailAddress') or 'Inconnu'
+    # Tickets par Type de Demande (remplace le leaderboard)
+    # NOTE: 'customfield_10001' est une supposition pour "Type de Demande"
+    # À ajuster si l'ID du champ personnalisé est différent.
+    jql_request_type = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND "Request Type" IS NOT EMPTY'
+    # Le champ pour "Request Type" peut varier, on essaie les plus courants
+    issues_request_type = fetch_jira_issues(jql_request_type, fields='customfield_10001,customfield_10002,issuetype')
+    print(f"[Jira] Tickets par type de demande récupérés: {len(issues_request_type)}")
+    
+    request_type_counts = Counter()
+    for ticket in issues_request_type:
+        # On cherche le bon champ dans les données du ticket
+        request_type_field = ticket['fields'].get('customfield_10001') or ticket['fields'].get('customfield_10002')
+        
+        if request_type_field and isinstance(request_type_field, dict):
+            # Structure standard pour les champs de type select list
+            name = request_type_field.get('value') or request_type_field.get('name', 'Inconnu')
+        elif isinstance(request_type_field, str):
+            # Si le champ est une simple chaîne
+            name = request_type_field
         else:
-            name = 'Inconnu'
+            # En dernier recours, on utilise le type de ticket (Issue Type)
+            issuetype_field = ticket['fields'].get('issuetype')
+            if issuetype_field and isinstance(issuetype_field, dict):
+                name = issuetype_field.get('name', 'Inconnu')
+            else:
+                name = 'Inconnu'
+
         if name != 'Inconnu':
-            resolved_by_user[name] = resolved_by_user.get(name, 0) + 1
-    for name, score in sorted(resolved_by_user.items(), key=lambda x: x[1], reverse=True):
-        leaderboard.append({'name': name, 'score': score})
+            request_type_counts[name] += 1
+
+    # Traiter les données pour le top 4 + "Autre"
+    sorted_types = request_type_counts.most_common()
+    top_4_types = sorted_types[:4]
+    other_types = sorted_types[4:]
+    
+    request_types_data = [{'name': name, 'score': score} for name, score in top_4_types]
+    
+    if other_types:
+        other_score = sum(score for _, score in other_types)
+        # Le tooltip sera généré côté client, on envoie juste les détails
+        other_details = [{'name': name, 'score': score} for name, score in other_types]
+        request_types_data.append({'name': 'Autre', 'score': other_score, 'details': other_details})
 
 
     # Tickets par statut
@@ -221,8 +260,8 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
         'support_health': support_health,
         'support_health_label': support_health_label,
         'progress': progress,
-        'leaderboard': leaderboard,
-        'workload': leaderboard,
+        'request_types': request_types_data,
+        'workload': request_types_data, # Gardé pour compatibilité si l'ancien nom est utilisé ailleurs
         'status_counts': dict(status_counts),
         'department_counts': dict(department_counts),
         'label_counts': dict(label_counts),

@@ -84,17 +84,29 @@ document.addEventListener('DOMContentLoaded', async function() {
             el.style.padding = '4px';
         }
     });
-    // Workload leaderboard
-    const workload = kpis.workload || kpis.leaderboard || [];
+    // Request Types (remplace Workload leaderboard)
+    const requestTypes = kpis.request_types || kpis.workload || [];
     const leaderboardDiv = document.getElementById('leaderboard');
-    leaderboardDiv.innerHTML = workload.length ? '' : '<span style="color:#ff7e7e">Aucune donnée équipe</span>';
-    workload.forEach((member,i)=>{
-        if(member.name && member.name!=='Inconnu'){
-            const div = document.createElement('div');
-            div.className='member';
-            div.innerHTML=`<div class="avatar" style="background:${chartColors[i%chartColors.length]}"></div><div class="name">${member.name}</div><div class="score">${member.score}</div>`;
-            leaderboardDiv.appendChild(div);
+    leaderboardDiv.innerHTML = requestTypes.length ? '' : '<span style="color:#ff7e7e">Aucune donnée de demande</span>';
+
+    requestTypes.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'member'; // Réutilisation de la classe pour le style
+        
+        let tooltipHtml = '';
+        if (item.name === 'Autre' && item.details && item.details.length > 0) {
+            const detailsList = item.details.map(d => `<li>${d.name}: ${d.score}</li>`).join('');
+            tooltipHtml = `<div class="tooltip-custom"><ul>${detailsList}</ul></div>`;
+            div.classList.add('has-tooltip');
         }
+
+        div.innerHTML = `
+            <div class="avatar" style="background:${chartColors[i % chartColors.length]}"></div>
+            <div class="name">${item.name}</div>
+            <div class="score">${item.score}</div>
+            ${tooltipHtml}
+        `;
+        leaderboardDiv.appendChild(div);
     });
     // Charts with params
     const respCR = await fetchOrFallback(`/tickets_created_vs_resolved`, {created:{},resolved:{}});
@@ -131,22 +143,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Le rendu des graphiques est maintenant géré par refreshAllBlocks
 
-    // Classement équipe : affiche le nom réel ou rien si "Inconnu"
-    leaderboardDiv.innerHTML = '';
-    if (workload.length === 0) {
-        leaderboardDiv.innerHTML = '<span style="color:#ff7e7e">Aucune donnée équipe</span>';
-    } else {
-        workload.forEach((member, i) => {
-            if(member.name && member.name !== 'Inconnu') {
-                const colors = chartColors;
-                const div = document.createElement('div');
-                div.className = 'member';
-                div.innerHTML = `<div class="avatar" style="background:${colors[i%colors.length]}"></div><div class="name">${member.name}</div><div class="score">${member.score}</div>`;
-                leaderboardDiv.appendChild(div);
-            }
-        });
-        if(leaderboardDiv.innerHTML === '') leaderboardDiv.innerHTML = '<span style="color:#ff7e7e">Aucun membre identifié</span>';
-    }
+    // Le code ci-dessus gère déjà l'affichage, cette section peut être supprimée ou commentée
+    // pour éviter la duplication.
 
     // Tickets par statut (barres horizontales individuelles, triées par %)
     let statusDataRaw;
@@ -191,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 percent: total ? (statusValues[i]/total*100) : 0
             }));
             statusArr = statusArr.sort((a,b)=>b.percent-a.percent);
-            let html = '<div style="display:flex;flex-direction:column;gap:12px;width:100%;margin-top:20px;">';
+            let html = '<div style="display:flex;flex-direction:column;gap:12px;width:100%;margin-top:-20px;">';
             statusArr.forEach((s, i) => {
                 const color = chartColors[i % chartColors.length];
                 html += `<div style='width:100%;'>
