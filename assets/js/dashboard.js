@@ -126,131 +126,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         showError('Aucune donnée tickets créés/résolus', '#chart-created-resolved');
     }
 
-    // Tickets par pôle (pie chart) dynamique (loader déjà affiché)
-    let departmentData;
-    try {
-        departmentData = await fetchOrFallback(`/tickets_by_department`, {});
-        console.log('API /tickets_by_department:', departmentData);
-    } catch (e) {
-        showError('Erreur de chargement des pôles', '#chart-department');
-    }
-    if (departmentData && Object.keys(departmentData).length > 0) {
-        const entries = Object.entries(departmentData).sort((a,b)=>b[1]-a[1]);
-        const top = entries.slice(0,5);
-        const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
-        if(otherCount>0) top.push(['Autre', otherCount]);
-        const labels = top.map(([k])=>k);
-        const values = top.map(([,v])=>v);
-        new Chart(document.getElementById('chart-department'), {
-            type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3 }] },
-            options: {
-                devicePixelRatio: window.devicePixelRatio || 1,
-                responsive: true,
-                cutout: '50%',
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label(ctx) {
-                                const val = ctx.parsed;
-                                const data = ctx.dataset.data;
-                                const tot = data.reduce((a,b)=>a+b,0);
-                                const pct = ((val/tot)*100).toFixed(1);
-                                return `${ctx.label}: ${val} (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            },
-            plugins: [{
-                id: 'centerText',
-                afterDraw(chart) {
-                    const active = chart.tooltip._active && chart.tooltip._active[0];
-                    if (active) {
-                        const val = chart.data.datasets[0].data[active.index];
-                        const tot = chart.data.datasets[0].data.reduce((a,b) => a + b, 0);
-                        if (tot > 0) {
-                            const pct = ((val / tot) * 100).toFixed(1) + '%';
-                            const { ctx, chartArea: { left, right, top, bottom } } = chart;
-                            ctx.save();
-                            ctx.font = 'bold 18px sans-serif';
-                            ctx.fillStyle = '#000';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(pct, (left + right) / 2, (top + bottom) / 2);
-                            ctx.restore();
-                        }
-                    }
-                }
-            }]
-        });
-    } else {
-        showError('Aucune donnée pôle', '#chart-department');
-    }
-
-    // Tickets par étiquette (pie chart) dynamique (loader déjà affiché)
-    let labelData;
-    try {
-        labelData = await fetchOrFallback(`/tickets_by_label`, {});
-        console.log('API /tickets_by_label:', labelData);
-    } catch (e) {
-        showError('Erreur de chargement des étiquettes', '#chart-label');
-    }
-    if (labelData && Object.keys(labelData).length > 0) {
-        const entries = Object.entries(labelData).sort((a,b)=>b[1]-a[1]);
-        const top = entries.slice(0,5);
-        const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
-        if(otherCount>0) top.push(['Autre', otherCount]);
-        const labels = top.map(([k])=>k);
-        const values = top.map(([,v])=>v);
-        new Chart(document.getElementById('chart-label'), {
-            type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 3 }] },
-            options: {
-                devicePixelRatio: window.devicePixelRatio || 1,
-                responsive: true,
-                cutout: '50%',
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label(ctx) {
-                                const val = ctx.parsed;
-                                const data = ctx.dataset.data;
-                                const tot = data.reduce((a,b)=>a+b,0);
-                                const pct = ((val/tot)*100).toFixed(1);
-                                return `${ctx.label}: ${val} (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            },
-            plugins: [{
-                id: 'centerText',
-                afterDraw(chart) {
-                    const active = chart.tooltip._active && chart.tooltip._active[0];
-                    if (active) {
-                        const val = chart.data.datasets[0].data[active.index];
-                        const tot = chart.data.datasets[0].data.reduce((a,b) => a + b, 0);
-                        if (tot > 0) {
-                            const pct = ((val / tot) * 100).toFixed(1) + '%';
-                            const { ctx, chartArea: { left, right, top, bottom } } = chart;
-                            ctx.save();
-                            ctx.font = 'bold 18px sans-serif';
-                            ctx.fillStyle = '#000';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(pct, (left + right) / 2, (top + bottom) / 2);
-                            ctx.restore();
-                        }
-                    }
-                }
-            }]
-        });
-    } else {
-        showError('Aucune donnée étiquette', '#chart-label');
-    }
+    // Le rendu des graphiques est maintenant géré par refreshAllBlocks
 
     // Classement équipe : affiche le nom réel ou rien si "Inconnu"
     leaderboardDiv.innerHTML = '';
@@ -331,32 +207,22 @@ document.addEventListener('DOMContentLoaded', async function() {
             barsDiv.innerHTML = '<span style="color:#ff7e7e;text-align:center;width:100%;display:block;margin-top:20px;">Aucune donnée de statut</span>';
         }
     }
-    updateStatusBlock();
-    // setInterval(updateStatusBlock, 60000); // SUPPRIMÉ    // Même logique pour les autres blocs graphiques :
-    // Ajoute un rafraîchissement auto toutes les 60s, et affiche la dernière donnée connue sans loader bloquant
-    // Tickets créés vs résolus
+    // --- Fonctions de mise à jour des blocs ---
     let lastCreatedVsResolved = null;
     async function updateCreatedVsResolved() {
         try {
             const createdVsResolved = await fetchOrFallback('/tickets_created_vs_resolved', {created: {}, resolved: {}});
-
             lastCreatedVsResolved = createdVsResolved;
-            // Limite à 30 derniers jours
-            const allDatesSorted = Array.from(new Set([
-                ...Object.keys(createdVsResolved.created),
-                ...Object.keys(createdVsResolved.resolved)
-            ])).sort();            const last30 = allDatesSorted.slice(-30);
+            const allDatesSorted = Array.from(new Set([...Object.keys(createdVsResolved.created), ...Object.keys(createdVsResolved.resolved)])).sort();
+            const last30 = allDatesSorted.slice(-30);
             const createdData = last30.map(date => createdVsResolved.created[date] || 0);
             const resolvedData = last30.map(date => createdVsResolved.resolved[date] || 0);
 
-            if(document.getElementById('chart-created-resolved')) {
-                // Destroy existing chart instance if it exists
-                const existingChart = Chart.getChart('chart-created-resolved');
-                if (existingChart) {
-                    existingChart.destroy();
-                }
-
-                new Chart(document.getElementById('chart-created-resolved'), {
+            const chartEl = document.getElementById('chart-created-resolved');
+            if(chartEl) {
+                const existingChart = Chart.getChart(chartEl);
+                if (existingChart) existingChart.destroy();
+                new Chart(chartEl, {
                     type: 'line',
                     data: {
                         labels: last30,
@@ -365,153 +231,61 @@ document.addEventListener('DOMContentLoaded', async function() {
                             { label: 'Résolus', data: resolvedData, borderColor: '#7fff7e', fill: false }
                         ]
                     },
-                    options: {
-                        responsive:true,
-                        plugins:{legend:{position:'bottom'}},
-                        scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } } }
-                    }
+                    options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } } } }
                 });
             }
         } catch (e) {
-            showError('Erreur de chargement des tickets créés/résolus ou non résolus', '#chart-created-resolved');
+            showError('Erreur de chargement des tickets créés/résolus', '#chart-created-resolved');
         }
     }
-    updateCreatedVsResolved();
-    // setInterval(updateCreatedVsResolved, 60000); // SUPPRIMÉ
-    // Tickets par pôle
+
     let lastDepartmentData = null;
     async function updateDepartment() {
         try {
-            departmentData = await fetchOrFallback('/tickets_by_department', {});
+            const departmentData = await fetchOrFallback('/tickets_by_department', {});
             lastDepartmentData = departmentData;
-            if (departmentData && Object.keys(departmentData).length > 0) {
-                const entries = Object.entries(departmentData).sort((a,b)=>b[1]-a[1]);
-                const top = entries.slice(0,5);
-                const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
-                if(otherCount>0) top.push(['Autre', otherCount]);
-                const labels = top.map(([k])=>k);
-                const values = top.map(([,v])=>v);
-                new Chart(document.getElementById('chart-department'), {
-                    type: 'doughnut',
-                    data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 6 }] },
-                    options: {
-                        devicePixelRatio: window.devicePixelRatio || 1,
-                        responsive: true,
-                        cutout: '50%',
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label(ctx) {
-                                        const val = ctx.parsed;
-                                        const data = ctx.dataset.data;
-                                        const tot = data.reduce((a,b)=>a+b,0);
-                                        const pct = ((val/tot)*100).toFixed(1);
-                                        return `${ctx.label}: ${val} (${pct}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    plugins: [{
-                        id: 'centerText',
-                        afterDraw(chart) {
-                            const active = chart.tooltip._active && chart.tooltip._active[0];
-                            if(active) {
-                                const val = chart.data.datasets[0].data[active.index];
-                                const tot = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-                                if (tot > 0) {
-                                    const pct = ((val/tot)*100).toFixed(1) + '%';
-                                    const {ctx, chartArea:{left,right,top,bottom}} = chart;
-                                    ctx.save(); ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#000';
-                                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                                    ctx.fillText(pct, (left+right)/2, (top+bottom)/2);
-                                    ctx.restore();
-                                }
-                            }
-                        }
-                    }]
-                });
-            } else {
+            const chartEl = document.getElementById('chart-department');
+            if (departmentData && Object.keys(departmentData).length > 0 && chartEl) {
+                const existingChart = Chart.getChart(chartEl);
+                if (existingChart) existingChart.destroy();
+                renderDoughnutChart(chartEl, departmentData);
+            } else if (chartEl) {
                 showError('Aucune donnée pôle', '#chart-department');
             }
         } catch (e) {
             showError('Erreur de chargement des pôles', '#chart-department');
         }
     }
-    updateDepartment();
-    // setInterval(updateDepartment, 60000); // SUPPRIMÉ
-    // Tickets par étiquette
+
     let lastLabelData = null;
     async function updateLabel() {
         try {
-            labelData = await fetchOrFallback('/tickets_by_label', {});
+            const labelData = await fetchOrFallback('/tickets_by_label', {});
             lastLabelData = labelData;
-            if (labelData && Object.keys(labelData).length > 0) {
-                const entries = Object.entries(labelData).sort((a,b)=>b[1]-a[1]);
-                const top = entries.slice(0,5);
-                const otherCount = entries.slice(5).reduce((sum,[,v])=>sum+v,0);
-                if(otherCount>0) top.push(['Autre', otherCount]);
-                const labels = top.map(([k])=>k);
-                const values = top.map(([,v])=>v);
-                new Chart(document.getElementById('chart-label'), {
-                    type: 'doughnut',
-                    data: { labels, datasets: [{ data: values, backgroundColor: chartColors, borderWidth: 6 }] },
-                    options: {
-                        devicePixelRatio: window.devicePixelRatio || 1,
-                        responsive: true,
-                        cutout: '50%',
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label(ctx) {
-                                        const val = ctx.parsed;
-                                        const data = ctx.dataset.data;
-                                        const tot = data.reduce((a,b)=>a+b,0);
-                                        const pct = ((val/tot)*100).toFixed(1);
-                                        return `${ctx.label}: ${val} (${pct}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    plugins: [{
-                        id: 'centerText',
-                        afterDraw(chart) {
-                            const active = chart.tooltip._active && chart.tooltip._active[0];
-                            if(active) {
-                                const val = chart.data.datasets[0].data[active.index];
-                                const tot = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-                                if (tot > 0) {
-                                    const pct = ((val/tot)*100).toFixed(1) + '%';
-                                    const { ctx, chartArea: { left, right, top, bottom } } = chart;
-                                    ctx.save();
-                                    ctx.font = 'bold 18px sans-serif';
-                                    ctx.fillStyle = '#000';
-                                    ctx.textAlign = 'center';
-                                    ctx.textBaseline = 'middle';
-                                    ctx.fillText(pct, (left + right) / 2, (top + bottom) / 2);
-                                    ctx.restore();
-                                }
-                            }
-                        }
-                    }]
-                });
-            } else {
+            const chartEl = document.getElementById('chart-label');
+            if (labelData && Object.keys(labelData).length > 0 && chartEl) {
+                const existingChart = Chart.getChart(chartEl);
+                if (existingChart) existingChart.destroy();
+                renderDoughnutChart(chartEl, labelData);
+            } else if (chartEl) {
                 showError('Aucune donnée étiquette', '#chart-label');
             }
         } catch (e) {
             showError('Erreur de chargement des étiquettes', '#chart-label');
         }
     }
-    updateLabel();    // setInterval(updateLabel, 60000); // SUPPRIMÉ
+
+    // --- Fonction de rafraîchissement global ---
+    function refreshAllBlocks() {
+        updateStatusBlock();
+        updateCreatedVsResolved();
+        updateDepartment();
+        updateLabel();
+    }
 
     // --- Initialisation ---
-    // Premier chargement
-    refreshAllBlocks();
-    // Auto-refresh toutes les 60 secondes
-    setInterval(refreshAllBlocks, 60000);
+    refreshAllBlocks(); // Premier chargement
+    setInterval(refreshAllBlocks, 60000); // Auto-refresh toutes les 60 secondes
 });
 
 // Force high DPI for crisp rendering
@@ -519,49 +293,52 @@ if (window.Chart && Chart.defaults) {
     Chart.defaults.devicePixelRatio = window.devicePixelRatio || 1;
 }
 
-// ...existing renderDoughnutChart helper...
+function prepareTopData(rawData, topN = 5) {
+    const entries = Object.entries(rawData).sort((a, b) => b[1] - a[1]);
+    const top = entries.slice(0, topN);
+    const otherCount = entries.slice(topN).reduce((sum, [, v]) => sum + v, 0);
+    if (otherCount > 0) {
+        top.push(['Autre', otherCount]);
+    }
+    const labels = top.map(([k]) => k);
+    const data = top.map(([, v]) => v);
+    return { labels, data };
+}
+
 function renderDoughnutChart(ctx, rawData) {
-    const { labels: rawLabels, data: rawValues } = prepareTopData(rawData);
-    // Combine and sort ascending
-    const combined = rawLabels.map((label, i) => ({ label, value: rawValues[i], color: chartColors[i % chartColors.length] }));
-    combined.sort((a, b) => a.value - b.value);
-    const labels = combined.map(d => d.label);
-    const data = combined.map(d => d.value);
-    const backgroundColor = combined.map(d => d.color);
-    return new Chart(ctx, {
+    const { labels, data } = prepareTopData(rawData);
+    const backgroundColor = labels.map((_, i) => chartColors[i % chartColors.length]);
+    
+    const chartEl = (typeof ctx === 'string') ? document.getElementById(ctx) : ctx;
+    if (!chartEl) return;
+
+    const existingChart = Chart.getChart(chartEl);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
+    return new Chart(chartEl, {
         type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor, borderWidth: 0, borderRadius: 8 }] },
-         options: {
-             devicePixelRatio: window.devicePixelRatio || 1,
-             responsive: true,
-             cutout: '50%',
-             plugins: {
-                 legend: { position: 'bottom', labels: { color: '#000' } },
-                 tooltip: { callbacks: { label(ctx) {
-                     const val = ctx.parsed;
-                     const tot = ctx.dataset.data.reduce((a,b) => a + b, 0);
-                     const pct = tot ? (val/tot*100).toFixed(1) : 0;
-                     return `${ctx.label}: ${val} (${pct}%)`;
-                 } } }
-             }
-         },
-         plugins: [{
-             id: 'centerText',
-             afterDraw(chart) {
-                 const active = chart.tooltip._active && chart.tooltip._active[0];
-                 if (active) {
-                     const val = chart.data.datasets[0].data[active.index];
-                     const tot = chart.data.datasets[0].data.reduce((a,b) => a + b, 0);
-                     if (tot > 0) {
-                         const pct = (val/tot*100).toFixed(1) + '%';
-                         const { ctx, chartArea: { left, right, top, bottom } } = chart;
-                         ctx.save(); ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#000';
-                         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                         ctx.fillText(pct, (left+right)/2, (top+bottom)/2);
-                         ctx.restore();
-                     }
-                 }
-             }
-         }]
-     });
+        data: {
+            labels,
+            datasets: [{ data, backgroundColor, borderWidth: 3 }]
+        },
+        options: {
+            responsive: true,
+            cutout: '50%',
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label(tooltipItem) {
+                            const val = tooltipItem.parsed;
+                            const total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
+                            return `${tooltipItem.label}: ${val} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }

@@ -6,13 +6,14 @@ from dotenv import load_dotenv
 import os
 import requests
 from requests_oauthlib import OAuth2Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import Counter, defaultdict
 import threading
 import time
 from oauthlib.oauth2 import WebApplicationClient
 from bson import ObjectId
 import bcrypt
+from waitress import serve
 
 load_dotenv()  # charge les variables depuis .env
 
@@ -50,6 +51,7 @@ while not mongo_ok:
 
 # --- Flask Session config for MongoDB ---
 app = Flask(__name__, static_folder='.', static_url_path='')
+CORS(app) # Active CORS pour toutes les routes
 app.config['SESSION_TYPE'] = 'mongodb'
 app.config['SESSION_MONGODB'] = mongo_client
 app.config['SESSION_MONGODB_DB'] = SESSION_DB
@@ -179,7 +181,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
 
 
     # Tickets créés vs résolus (filtre sur 30j)
-    date_30d = (datetime.utcnow() - timedelta(days=30)).strftime('%Y-%m-%d')
+    date_30d = (datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%d')
     jql_cr = f'project = {proj} AND assignee IN ({assignees_str}) AND (created >= "{date_30d}" OR resolutiondate >= "{date_30d}")'
     issues_cr = fetch_jira_issues(jql_cr, fields='created,resolutiondate')
     print(f"[Jira] Tickets créés/résolus récupérés (30j): {len(issues_cr)}")
@@ -231,7 +233,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
         'relaunch_sent': relaunched,
         'relaunch_closed': closed,
         'unresolved_tickets': dict(unresolved_per_day),
-        'updated_at': datetime.utcnow()
+        'updated_at': datetime.now(timezone.utc)
     }
     if mongo_ok and not return_data:
         # Store stats per project-team key
@@ -253,6 +255,12 @@ def user_to_dict(user):
     }
 
 # --- ROUTES QUI LISENT LA DB ---
+def get_default_stats_id():
+    """Computes the default ID for stats based on .env config."""
+    proj = os.getenv("JIRA_PROJECT_DEFAULT", "HEL")
+    assignees_list = os.getenv("JIRA_ASSIGNEES", "").split(",")
+    return f"{proj}_{'_'.join(assignees_list)}"
+
 @app.route('/api/kpis')
 def api_kpis():
     # Dynamic KPIs, optionally per projectKey
@@ -264,9 +272,13 @@ def api_kpis():
     # Fallback: read default dashboard stats from Mongo
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
-    stats = mongo_stats.find_one({'_id': 'dashboard'})
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key})
     if not stats:
-        return jsonify({'error': 'Stats non trouvées'}), 404
+        # Try legacy key for backward compatibility
+        stats = mongo_stats.find_one({'_id': 'dashboard'})
+        if not stats:
+            return jsonify({'error': 'Stats non trouvées'}), 404
     stats.pop('_id', None)
     return jsonify(stats)
 
@@ -274,8 +286,10 @@ def api_kpis():
 def api_stats():
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
-    # Lecture des stats depuis MongoDB
-    stats = mongo_stats.find_one({'_id': 'dashboard'})
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key}) or {}
+    if not stats:
+        stats = mongo_stats.find_one({'_id': 'dashboard'}) or {}
     if not stats:
         return jsonify({'error': 'Stats non trouvées'}), 404
     # Ne pas retourner les données sensibles
@@ -286,22 +300,26 @@ def api_stats():
 # Routes pour fournir les données individuelles aux anciens endpoints front-end
 @app.route('/tickets_created_vs_resolved')
 def get_chart_created_vs_resolved():
-    stats = mongo_stats.find_one({'_id': 'dashboard'}) or {}
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('created_vs_resolved', {}))
 
 @app.route('/tickets_by_department')
 def get_chart_by_department():
-    stats = mongo_stats.find_one({'_id': 'dashboard'}) or {}
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('department_counts', {}))
 
 @app.route('/tickets_by_label')
 def get_chart_by_label():
-    stats = mongo_stats.find_one({'_id': 'dashboard'}) or {}
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('label_counts', {}))
 
 @app.route('/tickets_by_status')
 def get_chart_by_status():
-    stats = mongo_stats.find_one({'_id': 'dashboard'}) or {}
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('status_counts', {}))
 
 # --- ROUTE DE TEST POUR FORCER LA MISE À JOUR DES STATS ---
@@ -565,6 +583,6 @@ if __name__ == '__main__':
     load_dotenv()
     PORT = int(os.getenv("PORT", 5000))
     # --- DÉBUT DE L'APPLICATION ---
-    print("[Serveur] Démarrage de l'application...")
+    print(f"[Serveur] Démarrage du serveur de production sur http://0.0.0.0:{PORT}")
     update_dashboard_stats()  # Préremplissage des statistiques au démarrage
-    app.run(host="0.0.0.0", port=PORT, debug=False)
+    serve(app, host="0.0.0.0", port=PORT, threads=10)
