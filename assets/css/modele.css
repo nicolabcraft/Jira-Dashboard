@@ -437,11 +437,14 @@ body.dark-mode .weather-row .weather-icon.selected {
 
 
 .form-container {
-  width: 320px;
+  width: 400px;
   border-radius: 0.75rem;
   background-color: rgba(17, 24, 39, 1);
-  padding: 2rem;
+  padding: 1.5rem;
   color: rgba(243, 244, 246, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .title {
@@ -707,4 +710,35 @@ body.dark-mode .weather-row .weather-icon.selected {
 
 .status-error {
     color: #ff7e7e;
+}
+
+/* --- Utilitaires de mise en page --- */
+.d-none {
+    display: none;
+}
+
+
+.form-title {
+    font-weight: 600;
+    font-size: 1.2em;
+}
+
+.form-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.form-submit-btn {
+    width: 120px;
+}
+
+.report-card {
+    flex: 1 1 400px;
+    max-width: 450px;
+}
+
+.report-status {
+    margin-top: 12px;
+    font-weight: 600;
 }
