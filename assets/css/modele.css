@@ -639,3 +639,24 @@ body.dark-mode .weather-row .weather-icon.selected {
   word-break: break-all;
   white-space: normal;
 }
+
+/* Styles pour l'adaptation des icônes de santé */
+.support-health-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.weather-row {
+  justify-content: space-between; /* Distribue l'espace entre les icônes */
+  width: 100%; /* Prend toute la largeur de la carte */
+  gap: 0; /* Annule l'espacement fixe */
+}
+
+.weather-icon {
+  font-size: 2.2em; /* Taille de police légèrement réduite pour un meilleur ajustement */
+  flex-grow: 1; /* Permet aux icônes de grandir pour remplir l'espace */
+  text-align: center; /* Centre les icônes */
+}

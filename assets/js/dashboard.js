@@ -74,12 +74,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (i === idx) {
             el.style.background = 'none';
             el.style.border = `3px solid ${healthColors[idx]}`;
-            el.style.borderRadius = '10px';
+            el.style.borderRadius = '16px';
             el.style.boxShadow = 'none';
+            el.style.padding = '4px';
         } else {
             el.style.background = 'none';
-            el.style.border = 'none';
+            el.style.border = '3px solid transparent';
             el.style.boxShadow = 'none';
+            el.style.padding = '4px';
         }
     });
     // Workload leaderboard
