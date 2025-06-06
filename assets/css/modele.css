@@ -742,3 +742,14 @@ body.dark-mode .weather-row .weather-icon.selected {
     margin-top: 12px;
     font-weight: 600;
 }
+
+/* Styles for particles background */
+#tsparticles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background-color: #0f121d;
+}

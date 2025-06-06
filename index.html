@@ -7,7 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/modele.css">
     <link rel="icon" href="assets/img/favicon.png">
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.9.3/tsparticles.bundle.min.js"></script>
     <script src="assets/js/script.js" defer></script>
+<script src="assets/js/particles.js" defer></script>
 
     <script>
         // Use relative API base for production, fallback to current origin
@@ -19,9 +21,10 @@
     </script>
 </head>
 <body>
-    <div style="background-color:#0f121d;">
+    <div id="tsparticles"></div>
+    <div style="background-color:transparent; position: relative; z-index: 1;">
     <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
-        <div class="form-container">
+        <div class="form-container" style="background-color: rgba(17, 24, 39, 0.8);">
             <p class="title">Connexion</p>
             <form class="form">
                 <div class="input-group">
