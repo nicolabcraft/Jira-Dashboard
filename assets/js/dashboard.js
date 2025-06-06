@@ -61,13 +61,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Update support health icons
     const pct = kpis.support_health;
     const icons = document.querySelectorAll('#weather-row .weather-icon');
-    let idx = pct >= 80 ? 0 : pct >= 60 ? 1 : pct >= 30 ? 2 : 3;
+    let idx = pct >= 80 ? 0 : pct >= 60 ? 1 : pct >= 40 ? 2 : pct >= 20 ? 3 : 4;
     // Define background colors for each health status
     const healthColors = [
         'var(--health-good, #7fff7e)',      // Good (green)
         'var(--health-fair, #ffe066)',      // Fair (yellow)
         'var(--health-warning, #ffb347)',   // Warning (orange)
-        'var(--health-bad, #ff7e7e)'        // Bad (red)
+        'var(--health-bad, #ff7e7e)',       // Bad (red)
+        'var(--health-critical, #ff4d4d)'  // Critical (darker red)
     ];
     icons.forEach((el, i) => {
         if (i === idx) {
