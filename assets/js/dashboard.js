@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 percent: total ? (statusValues[i]/total*100) : 0
             }));
             statusArr = statusArr.sort((a,b)=>b.percent-a.percent);
-            let html = '<div style="display:flex;flex-direction:column;gap:12px;width:100%;margin-top:-20px;">';
+            let html = '<div style="display:flex;flex-direction:column;gap:12px;width:100%;">';
             statusArr.forEach((s, i) => {
                 const color = chartColors[i % chartColors.length];
                 html += `<div style='width:100%;'>

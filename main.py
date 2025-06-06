@@ -422,11 +422,25 @@ def api_reports():
         if isinstance(d,dict): v=d.get('value','Autre')
         else: v='Autre'
         dept_counts[v]+=1
-    return jsonify({
-        'labels': dict(label_counts),
-        'statuses': dict(status_counts),
-        'departments': dict(dept_counts)
-    })
+    # Formatter les données pour correspondre à la structure attendue par le front-end
+    report_sheets = [
+        {
+            "name": "Par Étiquette",
+            "columns": ["Étiquette", "Nombre"],
+            "data": list(label_counts.items())
+        },
+        {
+            "name": "Par Statut",
+            "columns": ["Statut", "Nombre"],
+            "data": list(status_counts.items())
+        },
+        {
+            "name": "Par Pôle",
+            "columns": ["Pôle", "Nombre"],
+            "data": list(dept_counts.items())
+        }
+    ]
+    return jsonify(report_sheets)
 
 @app.route('/api/projects')
 def api_projects():
