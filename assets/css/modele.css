@@ -696,3 +696,15 @@ body.dark-mode .weather-row .weather-icon.selected {
 .member.has-tooltip:hover .tooltip-custom {
     display: block;
 }
+
+.status-success {
+    color: #7fff7e;
+}
+
+.status-warning {
+    color: #ffb347;
+}
+
+.status-error {
+    color: #ff7e7e;
+}
