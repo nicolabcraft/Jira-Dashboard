@@ -109,15 +109,20 @@
         <form id="report-form" style="display:flex;flex-direction:column;gap:18px;">
           <div style="font-weight:600;font-size:1.2em;">Génération de rapport</div>
           <div style="display:flex;gap:12px;align-items:center;">
-            <label><input type="radio" name="period" value="month" checked> Ce mois-ci</label>
+            <label><input type="radio" name="period" value="current" checked> Ce mois-ci</label>
             <label><input type="radio" name="period" value="custom"> Période personnalisée</label>
           </div>
+          <div id="custom-date-controls" style="display:none;">
+            <label for="report-month">Mois/Année:</label>
+            <input type="month" id="report-month" name="report-month">
+          </div>
           <div style="display:flex;gap:12px;align-items:center;">
-            <label><input type="radio" name="output" value="drive" checked> Google Drive</label>
-            <label><input type="radio" name="output" value="xlsx"> Télécharger XLSX</label>
+            <label><input type="radio" name="dest" value="drive" checked> Google Drive</label>
+            <label><input type="radio" name="dest" value="download"> Télécharger XLSX</label>
           </div>
           <button type="submit" style="width:120px;">Générer</button>
         </form>
+        <div id="report-status" style="margin-top: 12px; font-weight: 600;"></div>
       </div>
     </div>
   </main>
