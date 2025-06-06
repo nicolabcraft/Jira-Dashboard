@@ -293,6 +293,16 @@ def user_to_dict(user):
         "role": user.get("role", "user")
     }
 
+from functools import wraps
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return jsonify({'error': 'Authentification requise'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- ROUTES QUI LISENT LA DB ---
 def get_default_stats_id():
     """Computes the default ID for stats based on .env config."""
@@ -302,12 +312,6 @@ def get_default_stats_id():
 
 @app.route('/api/kpis')
 def api_kpis():
-    # Dynamic KPIs, optionally per projectKey
-    projectKey = request.args.get('projectKey')
-    if projectKey:
-        # Return fresh stats for project
-        stats = update_dashboard_stats(return_data=True, projectKey=projectKey)
-        return jsonify(stats)
     # Fallback: read default dashboard stats from Mongo
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
@@ -322,6 +326,7 @@ def api_kpis():
     return jsonify(stats)
 
 @app.route('/api/stats')
+@login_required
 def api_stats():
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
@@ -338,24 +343,28 @@ def api_stats():
 
 # Routes pour fournir les données individuelles aux anciens endpoints front-end
 @app.route('/tickets_created_vs_resolved')
+@login_required
 def get_chart_created_vs_resolved():
     id_key = get_default_stats_id()
     stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('created_vs_resolved', {}))
 
 @app.route('/tickets_by_department')
+@login_required
 def get_chart_by_department():
     id_key = get_default_stats_id()
     stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('department_counts', {}))
 
 @app.route('/tickets_by_label')
+@login_required
 def get_chart_by_label():
     id_key = get_default_stats_id()
     stats = mongo_stats.find_one({'_id': id_key}) or {}
     return jsonify(stats.get('label_counts', {}))
 
 @app.route('/tickets_by_status')
+@login_required
 def get_chart_by_status():
     id_key = get_default_stats_id()
     stats = mongo_stats.find_one({'_id': id_key}) or {}
@@ -363,12 +372,14 @@ def get_chart_by_status():
 
 # --- ROUTE DE TEST POUR FORCER LA MISE À JOUR DES STATS ---
 @app.route('/api/update_stats')
+@login_required
 def api_update_stats():
     threading.Thread(target=update_dashboard_stats).start()
     return jsonify({'status': 'Mise à jour des stats lancée'}), 202
 
 # --- ROUTE POUR TESTER LA CONNEXION À JIRA ---
 @app.route('/api/jira/test')
+@login_required
 def api_jira_test():
     url = JIRA_URL.rstrip('/') + '/rest/api/3/myself'
     auth = (JIRA_USERNAME, JIRA_TOKEN)
@@ -392,29 +403,31 @@ def api_mongo_test():
 
 # New endpoint: generate report data for given date range
 @app.route('/api/reports')
+@login_required
 def api_reports():
     start = request.args.get('startDate')
     end = request.args.get('endDate')
     if not start or not end:
         return jsonify({'error':'Paramètres startDate et endDate requis'}),400
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    proj = JIRA_PROJECT_DEFAULT
     
     # Labels
-    jql_labels = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate >= {start} AND createdDate <= {end} AND status = Closed'
+    jql_labels = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate >= {start} AND createdDate <= {end} AND status = Closed'
     issues_labels = fetch_jira_issues(jql_labels, fields='labels')
     label_counts = Counter()
     for t in issues_labels:
         for l in t['fields'].get('labels',[]): label_counts[l]+=1
 
     # Statuses
-    jql_status = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate >= {start} AND createdDate <= {end}'
+    jql_status = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate >= {start} AND createdDate <= {end}'
     issues_status = fetch_jira_issues(jql_status, fields='status')
     status_counts = Counter()
     for t in issues_status:
         s = t['fields'].get('status',{}).get('name','Inconnu'); status_counts[s]+=1
 
     # Departments
-    jql_dept = f'project = HEL AND assignee IN ({assignees_str}) AND createdDate >= {start} AND createdDate <= {end}'
+    jql_dept = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate >= {start} AND createdDate <= {end}'
     issues_dept = fetch_jira_issues(jql_dept, fields='customfield_12002')
     dept_counts = Counter()
     for t in issues_dept:
@@ -484,6 +497,44 @@ def api_tickets():
         })
     return jsonify(tickets)
 
+@app.route('/api/stats/relance')
+def api_stats_relance():
+    start = request.args.get('startDate')
+    end = request.args.get('endDate')
+    if not start or not end:
+        return jsonify({'error': 'Paramètres startDate et endDate requis'}), 400
+
+    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    proj = JIRA_PROJECT_DEFAULT
+    
+    # Tickets relancés dans la période
+    jql_relanced = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = RelanceEnvoyee AND createdDate >= "{start}" AND createdDate <= "{end}"'
+    relanced_issues = fetch_jira_issues(jql_relanced, fields='id')
+    relanced_count = len(relanced_issues)
+
+    # Nombre de ticket totals fermés dans la période
+    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate >= "{start}" AND createdDate <= "{end}"'
+    total_issues = fetch_jira_issues(jql_total, fields='id')
+    total_count = len(total_issues)
+
+    # Tickets clôturés avec relance dans la période
+    jql_closed_with_relance = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = RelanceClose AND createdDate >= "{start}" AND createdDate <= "{end}"'
+    closed_with_relance_issues = fetch_jira_issues(jql_closed_with_relance, fields='id')
+    closed_with_relance_count = len(closed_with_relance_issues)
+
+    # Calcul du pourcentage
+    if relanced_count > 0:
+        percentage = (relanced_count / total_count) * 100
+    else:
+        percentage = 0
+
+    return jsonify({
+        'relanced_tickets': relanced_count,
+        'closed_with_relance': closed_with_relance_count,
+        'total_tickets': total_count,
+        'percentage': percentage
+    })
+
 # --- User login with MongoDB ---
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -521,6 +572,7 @@ def logout():
     return jsonify({'success': True})
 
 @app.route('/api/user')
+@login_required
 def get_current_user():
     if 'user' not in session:
         return jsonify({'error': 'Non authentifié'}), 401
@@ -575,11 +627,13 @@ def serve_index():
     return app.send_static_file('index.html')
 
 @app.route('/api/users', methods=['GET'])
+@login_required
 def get_users():
     users = list(users_collection.find())
     return jsonify([user_to_dict(u) for u in users])
 
 @app.route('/api/users', methods=['POST'])
+@login_required
 def add_user():
     data = request.json
     required_fields = ["name", "email", "username", "password", "role"]
@@ -602,6 +656,7 @@ def add_user():
     return jsonify(user_to_dict(user)), 201
 
 @app.route('/api/users/<user_id>', methods=['PUT'])
+@login_required
 def update_user(user_id):
     data = request.json
     update = {}
@@ -624,6 +679,7 @@ def update_user(user_id):
     return jsonify(user_to_dict(user))
 
 @app.route('/api/users/<user_id>', methods=['DELETE'])
+@login_required
 def delete_user(user_id):
     try:
         oid = ObjectId(user_id)

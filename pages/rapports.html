@@ -131,6 +131,48 @@
         <div id="report-status-annual" style="margin-top: 12px; font-weight: 600;"></div>
       </div>
     </div>
+    <div class="dashboard-row">
+        <div class="card" style="flex: 1 1 400px; max-width: 450px;">
+            <!-- Statistiques des tickets relancés (mensuel) -->
+            <form id="relance-stats-form" style="display:flex;flex-direction:column;gap:18px;width:100%;">
+              <div style="font-weight:600;font-size:1.2em;">Statistiques des tickets relancés (mensuel)</div>
+              <div style="display:flex;gap:12px;align-items:center;">
+                <label><input type="radio" name="stats_period" value="current" checked> Ce mois-ci</label>
+                <label><input type="radio" name="stats_period" value="custom"> Période personnalisée</label>
+              </div>
+              <div id="custom-stats-date-controls" style="display:none;">
+                <label for="stats-month">Mois/Année:</label>
+                <input type="month" id="stats-month" name="stats-month">
+              </div>
+              <button type="submit" style="width:120px;">Afficher</button>
+            </form>
+            <div id="relance-stats-status" style="margin-top: 12px; font-weight: 600;"></div>
+            <div id="relance-stats-results" style="margin-top: 12px; display: none;">
+                <p>Tickets relancés: <span id="relanced-count"></span></p>
+                <p>Tickets clôturés avec relance: <span id="closed-with-relance-count"></span></p>
+                <p>% de tickets relancés et clôturés: <span id="relanced-percentage"></span></p>
+                <p>Total des tickets: <span id="total-tickets-count"></span></p>
+            </div>
+          </div>
+          <div class="card" style="flex: 1 1 400px; max-width: 450px;">
+            <!-- Statistiques des tickets relancés (annuel) -->
+            <form id="relance-stats-form-annual" style="display:flex;flex-direction:column;gap:18px;width:100%;">
+              <div style="font-weight:600;font-size:1.2em;">Statistiques des tickets relancés (annuel)</div>
+              <div>
+                <label for="stats-year">Année:</label>
+                <input type="number" id="stats-year" name="stats-year" min="2020" max="2099" step="1" value="2024">
+              </div>
+              <button type="submit" style="width:120px;">Afficher</button>
+            </form>
+            <div id="relance-stats-status-annual" style="margin-top: 12px; font-weight: 600;"></div>
+            <div id="relance-stats-results-annual" style="margin-top: 12px; display: none;">
+                <p>Tickets relancés: <span id="relanced-count-annual"></span></p>
+                <p>Tickets clôturés avec relance: <span id="closed-with-relance-count-annual"></span></p>
+                <p>% de tickets relancés et clôturés: <span id="relanced-percentage-annual"></span></p>
+                <p>Total des tickets: <span id="total-tickets-count-annual"></span></p>
+            </div>
+          </div>
+    </div>
   </main>
 </body>
 </html>

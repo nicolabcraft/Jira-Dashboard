@@ -93,9 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const reportSheets = await resp.json();
 
             if (!Array.isArray(reportSheets) || reportSheets.every(sheet => sheet.data.length === 0)) {
-                 statusDiv.textContent = 'Aucune donnée trouvée pour la période sélectionnée. Le rapport est vide.';
-                 statusDiv.className = 'status-warning';
-                 return;
+                statusDiv.textContent = 'Aucune donnée trouvée pour la période sélectionnée. Le rapport est vide.';
+                statusDiv.className = 'status-warning';
+                return;
             }
 
             // 2. Construire le fichier Excel
@@ -140,6 +140,132 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Erreur lors de la génération du rapport:', err);
             statusDiv.textContent = `Erreur: ${err.message}`;
             statusDiv.className = 'status-error';
+        }
+    }
+    // --- Éléments du formulaire de statistiques de relance (mensuel) ---
+    const relanceStatsForm = document.getElementById('relance-stats-form');
+    const relanceStatsStatusDiv = document.getElementById('relance-stats-status');
+    const customStatsDateControls = document.getElementById('custom-stats-date-controls');
+    const relanceStatsResultsDiv = document.getElementById('relance-stats-results');
+
+    // --- Éléments du formulaire de statistiques de relance (annuel) ---
+    const relanceStatsFormAnnual = document.getElementById('relance-stats-form-annual');
+    const relanceStatsStatusDivAnnual = document.getElementById('relance-stats-status-annual');
+    const relanceStatsResultsDivAnnual = document.getElementById('relance-stats-results-annual');
+
+    if (relanceStatsForm) {
+        relanceStatsForm.querySelectorAll('input[name="stats_period"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                customStatsDateControls.style.display =
+                    relanceStatsForm.stats_period.value === 'custom' ? 'block' : 'none';
+            });
+        });
+
+        relanceStatsForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            let year, month;
+            const today = new Date();
+
+            if (relanceStatsForm.stats_period.value === 'current') {
+                year = today.getFullYear();
+                month = today.getMonth() + 1;
+            } else {
+                const monthValue = document.getElementById('stats-month').value;
+                if (!monthValue) {
+                    relanceStatsStatusDiv.textContent = 'Veuillez sélectionner un mois et une année.';
+                    relanceStatsStatusDiv.className = 'status-error';
+                    return;
+                }
+                [year, month] = monthValue.split('-').map(Number);
+            }
+
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const endDay = new Date(year, month, 0).getDate();
+            const endDate = `${year}-${String(month).padStart(2, '0')}-${endDay}`;
+            
+            fetchRelanceStats(startDate, endDate);
+        });
+    }
+
+    async function fetchRelanceStats(startDate, endDate) {
+        relanceStatsStatusDiv.className = 'status-warning';
+        relanceStatsStatusDiv.textContent = 'Chargement des statistiques...';
+        relanceStatsResultsDiv.style.display = 'none';
+
+        try {
+            const apiUrl = `/api/stats/relance?startDate=${startDate}&endDate=${endDate}`;
+            const resp = await fetch(apiUrl);
+
+            if (!resp.ok) {
+                const errorData = await resp.json();
+                throw new Error(`Erreur de l'API: ${errorData.error || resp.statusText}`);
+            }
+
+            const stats = await resp.json();
+
+            document.getElementById('relanced-count').textContent = stats.relanced_tickets;
+            document.getElementById('closed-with-relance-count').textContent = stats.closed_with_relance;
+            document.getElementById('relanced-percentage').textContent = `${stats.percentage.toFixed(2)}%`;
+            document.getElementById('total-tickets-count').textContent = stats.total_tickets;
+
+            relanceStatsResultsDiv.style.display = 'block';
+            relanceStatsStatusDiv.textContent = 'Statistiques chargées.';
+            relanceStatsStatusDiv.className = 'status-success';
+
+        } catch (err) {
+            console.error('Erreur lors de la récupération des statistiques de relance:', err);
+            relanceStatsStatusDiv.textContent = `Erreur: ${err.message}`;
+            relanceStatsStatusDiv.className = 'status-error';
+        }
+    }
+
+    // Gestion du formulaire de statistiques annuelles
+    if (relanceStatsFormAnnual) {
+        relanceStatsFormAnnual.addEventListener('submit', async e => {
+            e.preventDefault();
+            const year = document.getElementById('stats-year').value;
+            if (!year) {
+                relanceStatsStatusDivAnnual.textContent = 'Veuillez sélectionner une année.';
+                relanceStatsStatusDivAnnual.className = 'status-error';
+                return;
+            }
+
+            const startDate = `${year}-01-01`;
+            const endDate = `${year}-12-31`;
+            
+            fetchRelanceStatsAnnual(startDate, endDate);
+        });
+    }
+
+    async function fetchRelanceStatsAnnual(startDate, endDate) {
+        relanceStatsStatusDivAnnual.className = 'status-warning';
+        relanceStatsStatusDivAnnual.textContent = 'Chargement des statistiques annuelles...';
+        relanceStatsResultsDivAnnual.style.display = 'none';
+
+        try {
+            const apiUrl = `/api/stats/relance?startDate=${startDate}&endDate=${endDate}`;
+            const resp = await fetch(apiUrl);
+
+            if (!resp.ok) {
+                const errorData = await resp.json();
+                throw new Error(`Erreur de l'API: ${errorData.error || resp.statusText}`);
+            }
+
+            const stats = await resp.json();
+
+            document.getElementById('relanced-count-annual').textContent = stats.relanced_tickets;
+            document.getElementById('closed-with-relance-count-annual').textContent = stats.closed_with_relance;
+            document.getElementById('relanced-percentage-annual').textContent = `${stats.percentage.toFixed(2)}%`;
+            document.getElementById('total-tickets-count-annual').textContent = stats.total_tickets;
+
+            relanceStatsResultsDivAnnual.style.display = 'block';
+            relanceStatsStatusDivAnnual.textContent = 'Statistiques annuelles chargées.';
+            relanceStatsStatusDivAnnual.className = 'status-success';
+
+        } catch (err) {
+            console.error('Erreur lors de la récupération des statistiques de relance annuelles:', err);
+            relanceStatsStatusDivAnnual.textContent = `Erreur: ${err.message}`;
+            relanceStatsStatusDivAnnual.className = 'status-error';
         }
     }
 });
