@@ -579,10 +579,24 @@ def delete_user(user_id):
         return jsonify({"error": "ID utilisateur invalide"}), 400
     return jsonify({"success": True})
 
+# --- TÂCHE DE FOND POUR LA MISE À JOUR DES STATS ---
+def stats_update_worker():
+    """Met à jour les stats toutes les 5 minutes."""
+    while True:
+        print("[Worker] Lancement de la mise à jour des statistiques...")
+        try:
+            update_dashboard_stats()
+            print("[Worker] Mise à jour des statistiques terminée.")
+        except Exception as e:
+            print(f"[Worker] Erreur lors de la mise à jour : {e}")
+        time.sleep(300) # 5 minutes
+
 if __name__ == '__main__':
     load_dotenv()
     PORT = int(os.getenv("PORT", 80))
     # --- DÉBUT DE L'APPLICATION ---
     print(f"[Serveur] Démarrage du serveur de production sur http://0.0.0.0:{PORT}")
-    update_dashboard_stats()  # Préremplissage des statistiques au démarrage
+    # Lancement du worker dans un thread séparé
+    worker_thread = threading.Thread(target=stats_update_worker, daemon=True)
+    worker_thread.start()
     serve(app, host="0.0.0.0", port=PORT, threads=10)
