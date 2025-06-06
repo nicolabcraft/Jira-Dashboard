@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname.split('/').pop();
     // Login page logic

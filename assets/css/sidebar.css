@@ -204,7 +204,7 @@ body, .main-bg {
   .sidebar-nav .nav-item:hover .nav-tooltip {
     display: none;
   }
-
+  
   .sidebar-header .menu-toggler {
     display: flex;
     height: 30px;
@@ -353,107 +353,4 @@ body, .main-bg {
   background: var(--sidebar-hover);
   color: var(--sidebar-hover-text);
   border: 1px solid var(--sidebar-hover-text);
-}
-/* --- Sélecteur de projet Jira moderne --- */
-.modern-project-selector {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 18px 18px 8px 18px;
-  background: var(--sidebar-bg);
-  border-bottom: 1px solid var(--sidebar-hover);
-  position: relative;
-  z-index: 10;
-}
-.project-selector-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--sidebar-hover);
-  color: var(--sidebar-text);
-  border: none;
-  border-radius: 999px;
-  padding: 8px 18px 8px 14px;
-  font-size: 1em;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  transition: background 0.2s, color 0.2s;
-  min-width: 0;
-  outline: none;
-}
-.project-selector-btn .material-symbols-rounded {
-  font-size: 1.3em;
-  color: var(--sidebar-text);
-  transition: color 0.2s;
-}
-.project-selector-btn .arrow {
-  margin-left: 6px;
-  font-size: 1.2em;
-  transition: transform 0.2s;
-}
-.project-selector-btn.active .arrow {
-  transform: rotate(180deg);
-}
-.project-selector-btn:focus, .project-selector-btn.active {
-  background: var(--sidebar-hover);
-  color: var(--sidebar-hover-text);
-}
-.project-selector-menu {
-  display: none;
-  position: absolute;
-  left: 0;
-  top: 54px;
-  width: 90%;
-  margin-left: 5%;
-  background: var(--sidebar-bg);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.13);
-  padding: 8px 0;
-  list-style: none;
-  z-index: 100;
-  border: 1px solid var(--sidebar-hover);
-  max-height: 320px;
-  overflow-y: auto;
-}
-.project-selector-menu.open {
-  display: block;
-}
-.project-selector-item {
-  padding: 10px 24px;
-  color: var(--sidebar-text);
-  cursor: pointer;
-  border-radius: 10px;
-  font-size: 1em;
-  transition: background 0.15s, color 0.15s;
-}
-.project-selector-item.selected {
-  background: var(--sidebar-hover);
-  color: var(--sidebar-hover-text);
-  font-weight: 600;
-}
-.project-selector-item:hover {
-  background: var(--sidebar-hover);
-  color: var(--sidebar-hover-text);
-}
-[data-theme="dark"] .modern-project-selector {
-  background: var(--sidebar-bg);
-  border-bottom: 1px solid #23263a;
-}
-[data-theme="dark"] .project-selector-btn {
-  background: #23263a;
-  color: #fff;
-}
-[data-theme="dark"] .project-selector-menu {
-  background: #23263a;
-  border: 1px solid #353a4d;
-}
-[data-theme="dark"] .project-selector-item {
-  color: #e0e0e0;
-}
-[data-theme="dark"] .project-selector-item.selected,
-[data-theme="dark"] .project-selector-item:hover {
-  background: #353a4d;
-  color: #FFD600;
 }

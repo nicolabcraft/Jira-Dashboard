@@ -2,8 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('report-form');
     const customControls = document.getElementById('custom-date-controls');
     const statusDiv = document.getElementById('report-status');
-    const projectSelect = document.getElementById('project-select');
-    const teamSelect = document.getElementById('team-select');
 
     // Toggle custom date input
     form.querySelectorAll('input[name="period"]').forEach(radio => {
@@ -12,13 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 form.period.value === 'custom' ? 'block' : 'none';
         });
     });
-
-    // Fetch and fill selectors
-    async function fetchOrFallback(url, fallback) {
-        const apiUrl = url.startsWith('http') ? url : `${window.API_BASE}${url.startsWith('/') ? url : '/' + url}`;
-        try { const res = await fetch(apiUrl); if(!res.ok) throw new Error(); return await res.json(); } catch { return fallback; }
-    }
-    // No project/team selectors in rapports
 
     // Form submission
     form.addEventListener('submit', async e => {
@@ -39,9 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const endDate = `${year}-${String(month).padStart(2, '0')}-${endDay}`;
 
         try {
-            // Original API call without projectKey and teamId
-            const params = `startDate=${startDate}&endDate=${endDate}`;
-            const resp = await fetch(`${window.API_BASE}/api/reports?${params}`);
+            // Fetch aggregated data from backend to avoid CORS issues
+            const resp = await fetch(`${window.API_BASE}/api/reports?startDate=${startDate}&endDate=${endDate}`);
             if (!resp.ok) throw new Error('API reports error');
             const { labels, statuses, departments } = await resp.json();
 

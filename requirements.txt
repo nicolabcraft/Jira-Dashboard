@@ -1,6 +1,9 @@
 Flask
 Flask-Cors
+Flask-Session
 requests
+requests-oauthlib
 pymongo
 python-dotenv
 bcrypt
+oauthlib
