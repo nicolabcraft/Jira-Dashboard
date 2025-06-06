@@ -18,7 +18,7 @@ async function fetchOrFallback(url, fallback) {
     // Build full API URL using base URL
     const apiUrl = url.startsWith('http')
         ? url
-        : `${window.API_BASE}${url.startsWith('/') ? url : '/' + url}`;
+        : `${url.startsWith('/') ? url : '/' + url}`;
     try {
         const res = await fetch(apiUrl);
         if (!res.ok) throw new Error('API error');

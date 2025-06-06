@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     async function checkApi() {
         // Determine API test URL
-        const url = `http://10.163.123.208:5000/api/mongo/test`;
+        const url = `http://10.163.123.208/api/mongo/test`;
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error('API not reachable');

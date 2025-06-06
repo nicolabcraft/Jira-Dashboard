@@ -581,7 +581,7 @@ def delete_user(user_id):
 
 if __name__ == '__main__':
     load_dotenv()
-    PORT = int(os.getenv("PORT", 5000))
+    PORT = int(os.getenv("PORT", 80))
     # --- DÉBUT DE L'APPLICATION ---
     print(f"[Serveur] Démarrage du serveur de production sur http://0.0.0.0:{PORT}")
     update_dashboard_stats()  # Préremplissage des statistiques au démarrage
