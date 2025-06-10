@@ -211,34 +211,63 @@ document.addEventListener('DOMContentLoaded', async function() {
     // --- Fonctions de mise à jour des blocs ---
     let lastCreatedVsResolved = null;
     async function updateCreatedVsResolved() {
-        try {
-            const createdVsResolved = await fetchOrFallback('/tickets_created_vs_resolved', {created: {}, resolved: {}});
-            lastCreatedVsResolved = createdVsResolved;
-            const allDatesSorted = Array.from(new Set([...Object.keys(createdVsResolved.created), ...Object.keys(createdVsResolved.resolved)])).sort();
-            const last30 = allDatesSorted.slice(-30);
-            const createdData = last30.map(date => createdVsResolved.created[date] || 0);
-            const resolvedData = last30.map(date => createdVsResolved.resolved[date] || 0);
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#ffffff' : '#000000';
 
-            const chartEl = document.getElementById('chart-created-resolved');
-            if(chartEl) {
-                const existingChart = Chart.getChart(chartEl);
-                if (existingChart) existingChart.destroy();
-                new Chart(chartEl, {
-                    type: 'line',
-                    data: {
-                        labels: last30,
-                        datasets: [
-                            { label: 'Créés', data: createdData, borderColor: '#7ecfff', fill: false },
-                            { label: 'Résolus', data: resolvedData, borderColor: '#7fff7e', fill: false }
-                        ]
+    try {
+        const createdVsResolved = await fetchOrFallback('/tickets_created_vs_resolved', {created: {}, resolved: {}});
+        lastCreatedVsResolved = createdVsResolved;
+        const allDatesSorted = Array.from(new Set([...Object.keys(createdVsResolved.created), ...Object.keys(createdVsResolved.resolved)])).sort();
+        const last30 = allDatesSorted.slice(-30);
+        const createdData = last30.map(date => createdVsResolved.created[date] || 0);
+        const resolvedData = last30.map(date => createdVsResolved.resolved[date] || 0);
+
+        const chartEl = document.getElementById('chart-created-resolved');
+        if(chartEl) {
+            const existingChart = Chart.getChart(chartEl);
+            if (existingChart) existingChart.destroy();
+
+            new Chart(chartEl, {
+                type: 'line',
+                data: {
+                    labels: last30,
+                    datasets: [
+                        { label: 'Créés', data: createdData, borderColor: '#7ecfff', fill: false },
+                        { label: 'Résolus', data: resolvedData, borderColor: '#7fff7e', fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: textColor
+                            }
+                        }
                     },
-                    options: { responsive:true, plugins:{legend:{position:'bottom'}}, scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } } } }
-                });
-            }
-        } catch (e) {
-            showError('Erreur de chargement des tickets créés/résolus', '#chart-created-resolved');
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
         }
+    } catch (e) {
+        showError('Erreur de chargement des tickets créés/résolus', '#chart-created-resolved');
     }
+}
+
 
     let lastDepartmentData = null;
     async function updateDepartment() {
@@ -284,6 +313,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateLabel();
     }
 
+    window.refreshAllBlocks = refreshAllBlocks;
+
     // --- Initialisation ---
     refreshAllBlocks(); // Premier chargement
     setInterval(refreshAllBlocks, 60000); // Auto-refresh toutes les 60 secondes
@@ -309,7 +340,7 @@ function prepareTopData(rawData, topN = 5) {
 function renderDoughnutChart(ctx, rawData) {
     const { labels, data } = prepareTopData(rawData);
     const backgroundColor = labels.map((_, i) => chartColors[i % chartColors.length]);
-    
+
     const chartEl = (typeof ctx === 'string') ? document.getElementById(ctx) : ctx;
     if (!chartEl) return;
 
@@ -318,28 +349,51 @@ function renderDoughnutChart(ctx, rawData) {
         existingChart.destroy();
     }
 
+    // 🎨 Détecte les couleurs selon le thème actif
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const legendTextColor = isDark ? '#fff' : '#000';
+    const tooltipBackground = isDark ? '#333' : '#f9f9f9';
+    const tooltipTextColor = isDark ? '#fff' : '#000';
+
     return new Chart(chartEl, {
         type: 'doughnut',
         data: {
-            labels,
-            datasets: [{ data, backgroundColor, borderWidth: 3 }]
+        labels,
+        datasets: [{
+            data,
+            backgroundColor,
+            borderWidth: 3
+        }]
         },
         options: {
-            responsive: true,
-            cutout: '50%',
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label(tooltipItem) {
-                            const val = tooltipItem.parsed;
-                            const total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
-                            return `${tooltipItem.label}: ${val} (${percentage}%)`;
-                        }
-                    }
+        responsive: true,
+        cutout: '50%',
+        plugins: {
+            legend: {
+            position: 'bottom',
+            labels: {
+                color: legendTextColor,
+                font: {
+                size: 12
+                },
+                padding: 15,
+                boxWidth: 20
+            }
+            },
+            tooltip: {
+            backgroundColor: tooltipBackground,
+            titleColor: tooltipTextColor,
+            bodyColor: tooltipTextColor,
+            callbacks: {
+                label(tooltipItem) {
+                const val = tooltipItem.parsed;
+                const total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
+                return `${tooltipItem.label}: ${val} (${percentage}%)`;
                 }
             }
+            }
+        }
         }
     });
 }

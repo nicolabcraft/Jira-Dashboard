@@ -54,6 +54,10 @@ window.onload = () => {
   document.querySelector('#theme-toggle')?.addEventListener('click', () => {
     theme.value = theme.value === 'light' ? 'dark' : 'light';
     setPreference();
+    if (typeof window.refreshAllBlocks === 'function') {
+      window.refreshAllBlocks();
+    }
+    renderDoughnutChart('chart', yourRawData); // Remplace "yourRawData" par tes données réelles
   });
 };
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ({matches:isDark}) => {
