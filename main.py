@@ -64,7 +64,7 @@ GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_DISCOVERY_URL = (
     "https://accounts.google.com/.well-known/openid-configuration"
 )
-REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/api/login/google/callback')
+REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:80/api/login/google/callback')
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
 # --- Fonctions utilitaires minimales pour éviter les erreurs ---
