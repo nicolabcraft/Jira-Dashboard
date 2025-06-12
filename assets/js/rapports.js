@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
+fetch('/api/get-google-drive-email')
+        .then(response => response.json())
+        .then(data => {
+            const googleDriveEmailElement = document.getElementById('google-drive-email');
+            if (googleDriveEmailElement) {
+                googleDriveEmailElement.textContent = data.email;
+            }
+        })
+        .catch(error => console.error('Error fetching Google Drive email:', error));
     // --- Éléments du formulaire mensuel ---
     const monthlyForm = document.getElementById('report-form-monthly');
     const monthlyStatusDiv = document.getElementById('report-status-monthly');

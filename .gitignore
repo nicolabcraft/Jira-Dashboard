@@ -177,4 +177,5 @@ cython_debug/
 .vscode/
 *.code-workspace
 .pre-commit-config.yaml
-google_auth.json
+# Google Cloud authentication file
+*.json

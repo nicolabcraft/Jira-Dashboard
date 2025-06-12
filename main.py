@@ -763,6 +763,13 @@ def stats_update_worker():
             print(f"[Worker] Erreur lors de la mise à jour : {e}")
         time.sleep(300) # 5 minutes
 
+# -- get-google-drive-email
+@app.route('/api/get-google-drive-email')
+def get_google_drive_email():
+    """Retourne l'email du compte Google Drive configuré."""
+    google_drive_email = os.getenv('GOOGLE_DRIVE_SHARE_EMAIL')
+    return jsonify({"email": google_drive_email})
+
 if __name__ == '__main__':
     load_dotenv()
     PORT = int(os.getenv("PORT", 80))
