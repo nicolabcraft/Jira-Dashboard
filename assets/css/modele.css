@@ -346,6 +346,48 @@ nav a[data-icon]::before {
 .api-error-box button:hover {
   background: #e04343;
 }
+/* --- Modal Styles --- */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: #fff;
+  color: #232a36;
+  margin: 10% auto;
+  padding: 25px;
+  border: 1px solid #ddd;
+  width: 90%;
+  max-width: 600px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+}
+
+.close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
 
 /* Support health weather icon wrapper and marker */
 .weather-icon { font-size:2.5em; display:inline-block; }
@@ -387,6 +429,34 @@ nav a[data-icon]::before {
   font-size: 1em;
   cursor: pointer;
   transition: border-color 0.2s;
+body.dark-mode .modal-content {
+    background-color: #2b3040;
+    color: #e0e6f1;
+    border-color: #4c566a;
+}
+
+body.dark-mode .modal-content h3,
+body.dark-mode .modal-content p,
+body.dark-mode .modal-content li,
+body.dark-mode .modal-content label,
+body.dark-mode .modal-content strong {
+    color: #e0e6f1;
+}
+
+body.dark-mode .modal-content input[type="text"] {
+    background-color: #1e2430;
+    color: #e0e6f1;
+    border: 1px solid #4c566a;
+}
+
+body.dark-mode .close-button {
+    color: #aaa;
+}
+
+body.dark-mode .close-button:hover,
+body.dark-mode .close-button:focus {
+    color: #fff;
+}
 }
 .selectors select:hover {
   border-color: #7ecfff;
@@ -428,6 +498,34 @@ body.dark-mode #status-bars > div > div:nth-child(2) {
 }
 body.dark-mode .weather-row .weather-icon.selected {
   border-color: currentColor;
+}
+body.dark-mode .modal-content {
+    background-color: #2b3040;
+    color: #e0e6f1;
+    border-color: #4c566a;
+}
+
+body.dark-mode .modal-content h3,
+body.dark-mode .modal-content p,
+body.dark-mode .modal-content li,
+body.dark-mode .modal-content label,
+body.dark-mode .modal-content strong {
+    color: #e0e6f1;
+}
+
+body.dark-mode .modal-content input[type="text"] {
+    background-color: #1e2430;
+    color: #e0e6f1;
+    border: 1px solid #4c566a;
+}
+
+body.dark-mode .close-button {
+    color: #aaa;
+}
+
+body.dark-mode .close-button:hover,
+body.dark-mode .close-button:focus {
+    color: #fff;
 }
 
 @media (max-width: 1100px) {
@@ -753,3 +851,4 @@ body.dark-mode .weather-row .weather-icon.selected {
   z-index: 0;
   background-color: #0f121d;
 }
+
