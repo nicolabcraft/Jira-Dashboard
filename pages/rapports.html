@@ -14,6 +14,40 @@
     <script src="../assets/js/rapports.js" defer></script>
     <script src="../assets/js/sidebar.js" defer></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
+<style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 8px;
+    }
+    .close-button {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close-button:hover,
+    .close-button:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body class="main-bg">
   <aside class="sidebar">
@@ -174,5 +208,27 @@
           </div>
     </div>
   </main>
+
+  <!-- Google Drive Modal -->
+  <div id="google-drive-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-button">&times;</span>
+      <h3>Exporter vers Google Drive</h3>
+      <p>Pour autoriser l'exportation, veuillez suivre les étapes ci-dessous :</p>
+      <ol>
+        <li>Ouvrez Google Drive et faites un clic droit sur le dossier de destination.</li>
+        <li>Cliquez sur <strong>Partager</strong>.</li>
+        <li>Dans le champ "Ajouter des personnes et des groupes", collez cette adresse e-mail :<br><strong>n.abrantes@studi.fr</strong></li>
+        <li>Assurez-vous que le rôle est bien <strong>Éditeur</strong>, puis cliquez sur "Envoyer".</li>
+        <li>Copiez l'ID du dossier depuis la barre d'adresse de votre navigateur (la partie après <code>/folders/</code>).</li>
+      </ol>
+      <form id="google-drive-form">
+        <label for="folder-id">ID du dossier Google Drive :</label>
+        <input type="text" id="folder-id" name="folder-id" required style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px;">
+        <button type="submit">Valider et Exporter</button>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>

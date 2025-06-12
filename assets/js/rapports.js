@@ -8,8 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const annualForm = document.getElementById('report-form-annual');
     const annualStatusDiv = document.getElementById('report-status-annual');
 
-    // Affiche ou cache le sélecteur de date personnalisé pour le formulaire mensuel
-    if (monthlyForm) {
+   // --- Éléments de la modale Google Drive ---
+   const modal = document.getElementById('google-drive-modal');
+   const closeModalButton = document.querySelector('.close-button');
+   const driveForm = document.getElementById('google-drive-form');
+   let reportDataForUpload = {}; // Pour stocker les données du rapport pour l'upload
+
+   // Affiche ou cache le sélecteur de date personnalisé pour le formulaire mensuel
+   if (monthlyForm) {
         monthlyForm.querySelectorAll('input[name="period"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 customControls.style.display =
@@ -131,9 +137,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 XLSX.writeFile(wb, fileName);
                 statusDiv.textContent = `Rapport "${fileName}" généré et téléchargé.`;
                 statusDiv.className = 'status-success';
-            } else {
-                statusDiv.textContent = 'L\'export vers Google Drive n\'est pas pris en charge.';
-                statusDiv.className = 'status-warning';
+            } else if (dest === 'drive') {
+               // Stocker les données et ouvrir la modale
+               reportDataForUpload = { wb, fileName, statusDiv };
+               modal.style.display = 'block';
+               statusDiv.textContent = 'En attente de l\'ID du dossier Google Drive...';
+               statusDiv.className = 'status-info';
             }
 
         } catch (err) {
@@ -268,4 +277,76 @@ document.addEventListener('DOMContentLoaded', () => {
             relanceStatsStatusDivAnnual.className = 'status-error';
         }
     }
+   // --- Gestion de la modale Google Drive ---
+   if (modal) {
+       // Fermer la modale en cliquant sur le 'x'
+       closeModalButton.onclick = () => {
+           modal.style.display = 'none';
+       };
+
+       // Fermer la modale en cliquant en dehors
+       window.onclick = event => {
+           if (event.target == modal) {
+               modal.style.display = 'none';
+           }
+       };
+
+       // Gérer la soumission du formulaire de la modale
+       driveForm.addEventListener('submit', e => {
+           e.preventDefault();
+           const folderId = document.getElementById('folder-id').value;
+           if (!folderId) {
+               alert('Veuillez entrer l-ID du dossier.');
+               return;
+           }
+           modal.style.display = 'none';
+           uploadToGoogleDrive(folderId);
+       });
+   }
+
+   /**
+    * Envoie le fichier Excel au backend pour l'upload sur Google Drive.
+    * @param {string} folderId - L'ID du dossier Google Drive.
+    */
+   async function uploadToGoogleDrive(folderId) {
+       const { wb, fileName, statusDiv } = reportDataForUpload;
+
+       if (!wb || !fileName || !statusDiv) {
+           console.error("Données du rapport manquantes pour l'upload.");
+           return;
+       }
+
+       statusDiv.textContent = `Export vers Google Drive en cours...`;
+       statusDiv.className = 'status-warning';
+
+       try {
+           // Convertir le workbook en Blob
+           const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+           const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+           const formData = new FormData();
+           formData.append('file', blob, fileName);
+           formData.append('folderId', folderId);
+           formData.append('fileName', fileName); // Envoyer aussi le nom du fichier
+
+           const resp = await fetch('/api/export/drive', {
+               method: 'POST',
+               body: formData,
+           });
+
+           if (!resp.ok) {
+               const errorData = await resp.json();
+               throw new Error(errorData.error || 'Erreur lors de l\'upload.');
+           }
+
+           const result = await resp.json();
+           statusDiv.innerHTML = `Rapport exporté avec succès vers Google Drive. <a href="${result.file_url}" target="_blank">Voir le fichier</a>`;
+           statusDiv.className = 'status-success';
+
+       } catch (err) {
+           console.error('Erreur lors de l\'export vers Google Drive:', err);
+           statusDiv.textContent = `Erreur: ${err.message}`;
+           statusDiv.className = 'status-error';
+       }
+   }
 });

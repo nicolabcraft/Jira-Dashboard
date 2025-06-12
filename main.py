@@ -14,6 +14,10 @@ from oauthlib.oauth2 import WebApplicationClient
 from bson import ObjectId
 import bcrypt
 from waitress import serve
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
 
 load_dotenv()  # charge les variables depuis .env
 
@@ -497,6 +501,64 @@ def api_tickets():
             'updated': fields.get('updated'),
         })
     return jsonify(tickets)
+
+@app.route('/api/export/drive', methods=['POST'])
+@login_required
+def export_to_drive():
+   if 'file' not in request.files:
+       return jsonify({'error': 'Aucun fichier fourni'}), 400
+   
+   folder_id = request.form.get('folderId')
+   file_name = request.form.get('fileName')
+   
+   if not folder_id or not file_name:
+       return jsonify({'error': 'ID du dossier et nom du fichier requis'}), 400
+
+   file_storage = request.files['file']
+   
+   # Lire le contenu du fichier en mémoire
+   file_content = file_storage.read()
+   
+   credentials_path = os.getenv('GOOGLE_API_CREDENTIALS_PATH')
+   if not credentials_path or not os.path.exists(credentials_path):
+       print(f"Erreur: Le fichier de credentials '{credentials_path}' est introuvable.")
+       return jsonify({'error': 'Configuration du serveur Google Drive incomplète.'}), 500
+
+   try:
+       creds = service_account.Credentials.from_service_account_file(
+           credentials_path,
+           scopes=['https://www.googleapis.com/auth/drive']
+       )
+       service = build('drive', 'v3', credentials=creds)
+       
+       file_metadata = {
+           'name': file_name,
+           'parents': [folder_id]
+       }
+       
+       media = MediaIoBaseUpload(
+           io.BytesIO(file_content),
+           mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+           resumable=True
+       )
+       
+       file = service.files().create(
+           body=file_metadata,
+           media_body=media,
+           fields='id, webViewLink'
+       ).execute()
+       
+       print(f"Fichier uploadé avec succès. ID: {file.get('id')}")
+       
+       return jsonify({
+           'success': True,
+           'file_id': file.get('id'),
+           'file_url': file.get('webViewLink')
+       })
+
+   except Exception as e:
+       print(f"Erreur lors de l'export vers Google Drive: {e}")
+       return jsonify({'error': f'Une erreur est survenue: {e}'}), 500
 
 @app.route('/api/stats/relance')
 def api_stats_relance():
