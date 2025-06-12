@@ -256,6 +256,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Stockage en base
     stats = {
         'total_tickets': total_tickets,
+        'total_open_tickets': total_tickets - tickets_resolved,
         'tickets_resolved': tickets_resolved,
         'support_health': support_health,
         'support_health_label': support_health_label,
