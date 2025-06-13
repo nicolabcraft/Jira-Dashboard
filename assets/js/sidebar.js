@@ -1,3 +1,26 @@
+// Fonction pour vérifier si l'utilisateur est admin
+async function checkAndShowAdminButton() {
+    try {
+        const response = await fetch('/api/user', {
+            credentials: 'include'
+        });
+        if (!response.ok) return;
+        
+        const user = await response.json();
+        const adminButton = document.querySelector('.nav-item a[href="admin_dashboard.html"]')?.parentElement;
+        
+        if (adminButton) {
+            if (user.role === 'admin') {
+                adminButton.style.display = 'block';
+            } else {
+                adminButton.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors de la vérification des droits admin:', error);
+    }
+}
+
 const sidebar = document.querySelector(".sidebar");
 const sidebarToggler = document.querySelector(".sidebar-toggler");
 const menuToggler = document.querySelector(".menu-toggler");
@@ -49,7 +72,8 @@ const reflectPreference = () => {
 };
 const theme = { value: getColorPreference() };
 reflectPreference();
-window.onload = () => {
+window.onload = async () => {
+    await checkAndShowAdminButton();
   reflectPreference();
   document.querySelector('#theme-toggle')?.addEventListener('click', () => {
     theme.value = theme.value === 'light' ? 'dark' : 'light';

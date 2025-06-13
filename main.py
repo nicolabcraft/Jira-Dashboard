@@ -4,6 +4,7 @@ from flask_session import Session
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+import sys
 import requests
 from requests_oauthlib import OAuth2Session
 from datetime import datetime, timedelta, timezone
@@ -55,7 +56,14 @@ while not mongo_ok:
 
 # --- Flask Session config for MongoDB ---
 app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app) # Active CORS pour toutes les routes
+# Configuration CORS plus détaillée
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 app.config['SESSION_TYPE'] = 'mongodb'
 app.config['SESSION_MONGODB'] = mongo_client
 app.config['SESSION_MONGODB_DB'] = SESSION_DB
@@ -111,7 +119,7 @@ def get_resolved_tickets(projectKey=None):
     """
     proj = projectKey or JIRA_PROJECT_DEFAULT
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND statusCategory = Done AND resolved >= -30d'
+    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND resolved >= -30d'
     return fetch_jira_issues(jql, fields='assignee,resolutiondate,status')
 
 # --- FONCTION POUR METTRE À JOUR LES STATS DASHBOARD EN BASE ---
@@ -301,6 +309,26 @@ def user_to_dict(user):
 
 from functools import wraps
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return jsonify({'error': 'Authentification requise'}), 401
+        
+        # Vérifier si l'utilisateur est admin
+        user = users_collection.find_one({
+            '$or': [
+                {'username': session['user']},
+                {'email': session['user']}
+            ]
+        })
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Accès non autorisé'}), 403
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -317,6 +345,7 @@ def get_default_stats_id():
     return f"{proj}_{'_'.join(assignees_list)}"
 
 @app.route('/api/kpis')
+@admin_required
 def api_kpis():
     # Fallback: read default dashboard stats from Mongo
     if not mongo_ok:
@@ -332,7 +361,7 @@ def api_kpis():
     return jsonify(stats)
 
 @app.route('/api/stats')
-@login_required
+@admin_required
 def api_stats():
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
@@ -471,25 +500,35 @@ def api_projects():
     data = resp.json().get('values', [])
     return jsonify([{ 'key': p.get('key'), 'name': p.get('name') } for p in data])
 
-@app.route('/api/tickets')
-def api_tickets():
-    projectKey = request.args.get('projectKey')
-    teamId = request.args.get('teamId')
-    if not projectKey or not teamId:
-        return jsonify({'error':'projectKey and teamId required'}),400
-    # Fetch team members via Jira REST API
-    team_url = f"{JIRA_URL.rstrip('/')}/rest/api/3/people/team/{teamId}"
-    resp = requests.get(team_url, auth=(JIRA_USERNAME, JIRA_TOKEN))
-    if resp.status_code != 200:
-        return jsonify({'error':'jira error','details':resp.text}), resp.status_code
-    members = [m.get('accountId') for m in resp.json().get('values',[]) if m.get('accountId')]
-    if not members:
-        return jsonify([])  # no team members
-    assignees_str = ','.join([f'"{a}"' for a in members])
-    # Fetch issues from Jira
-    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) ORDER BY created DESC'
+@app.route('/api/tickets/recent')
+@admin_required
+def api_tickets_recent():
+    """Retourne les tickets des 30 derniers jours"""
+    projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
+    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND createdDate >= -30d ORDER BY created DESC'
     issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=100)
-    # Simplify payload
+    tickets = []
+    for t in issues:
+        fields = t.get('fields', {})
+        tickets.append({
+            'key': t.get('key'),
+            'summary': fields.get('summary'),
+            'status': fields.get('status',{}).get('name'),
+            'assignee': fields.get('assignee',{}).get('displayName'),
+            'created': fields.get('created'),
+            'updated': fields.get('updated'),
+        })
+    return jsonify(tickets)
+
+@app.route('/api/tickets/all')
+@admin_required
+def api_tickets_all():
+    """Retourne tous les tickets sans limite de date"""
+    projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
+    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) ORDER BY created DESC'
+    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=1000)
     tickets = []
     for t in issues:
         fields = t.get('fields', {})
@@ -805,6 +844,33 @@ def get_google_drive_email():
     """Retourne l'email du compte Google Drive configuré."""
     google_drive_email = os.getenv('GOOGLE_DRIVE_SHARE_EMAIL')
     return jsonify({"email": google_drive_email})
+
+@app.route('/api/restart', methods=['POST'])
+@admin_required
+def restart_server():
+    """Redémarre le serveur Python via une commande système"""
+    try:
+        # Sur Windows, utiliser 'start' pour lancer un nouveau processus
+        if os.name == 'nt':
+            os.system(f'start /B python {os.path.abspath(__file__)}')
+            os._exit(0)
+        # Sur Unix, utiliser nohup
+        else:
+            os.system(f'nohup python {os.path.abspath(__file__)} &')
+            os._exit(0)
+            
+        return jsonify({"success": True, "message": "Serveur en cours de redémarrage"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/restart', methods=['OPTIONS'])
+def restart_server_options():
+    """Gère les requêtes OPTIONS pour /api/restart"""
+    response = jsonify({'success': True})
+    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 if __name__ == '__main__':
     load_dotenv()
