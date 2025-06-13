@@ -4,12 +4,13 @@
 
 | Version | Support            | État de sécurité            |
 | ------- | ------------------ | ----------------------------|
-| 1.2.4   | :white_check_mark: | Dernière version stable     |
+| 1.3.0   | :white_check_mark: | Dernière version stable     |
+| 1.2.4   | :warning:          | Correctifs de sécurité      |
 | 1.2.3   | :warning:          | Correctifs de sécurité      |
-| 1.2.2   | :warning:          | Correctifs de sécurité      |
-| 1.2.1   | :warning:          | Support de sécurité minimal |
-| 1.2.0   | :x:                | Support de sécurité minimal |
-| 1.1.0   | :x:                | Support de sécurité minimal |
+| 1.2.2   | :warning:          | Support de sécurité minimal |
+| 1.2.1   | :x:                | Non supporté                |
+| 1.2.0   | :x:                | Non supporté                |
+| 1.1.0   | :x:                | Non supporté                |
 | 1.0.0   | :x:                | Non supporté                |
 | < 1.0   | :x:                | Non supporté                |
 
