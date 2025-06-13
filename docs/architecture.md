@@ -1,8 +1,8 @@
-# Architecture du Dashboard Jira
+# 🏗️ Architecture du Dashboard Jira
 
-Ce document détaille l'architecture technique du Dashboard Jira, une application web permettant de visualiser et gérer les tickets Jira ainsi que les utilisateurs.
+🔍 Ce document détaille l'architecture technique du Dashboard Jira (v1.2.3), une application web permettant de visualiser et gérer les tickets Jira ainsi que les utilisateurs.
 
-## Vue d'ensemble
+## 🎯 Vue d'ensemble
 
 ```mermaid
 graph TD
@@ -49,31 +49,35 @@ graph TD
     D -- "Export" --> N
 ```
 
-## Architecture Backend
+## 🔧 Architecture Backend
 
-### Composants Principaux
+### 🧩 Composants Principaux
 
-1. **API REST (Flask)**
+1. **🌐 API REST (Flask)**
    - Endpoints sécurisés avec authentification requise
    - Gestion des routes pour les statistiques, utilisateurs et rapports
    - Middleware CORS et gestion des sessions
+   - Support des requêtes HTTPS
 
-2. **Worker Thread**
+2. **⚡ Worker Thread**
    - Mise à jour automatique des statistiques toutes les 5 minutes
    - Exécution asynchrone des requêtes Jira
    - Cache des données dans MongoDB
+   - Gestion intelligente des erreurs
 
-3. **Gestionnaire d'authentification**
+3. **🔐 Gestionnaire d'authentification**
    - Support multi-méthodes (local + Google SSO)
    - Hashage bcrypt des mots de passe
    - Migration automatique des anciens mots de passe
+   - Protection contre les attaques par force brute
 
-4. **Intégrations**
+4. **🔌 Intégrations**
    - Client Jira (requêtes REST avec authentification)
    - Google OAuth2 pour SSO
    - Google Drive pour l'export des rapports
+   - Gestion sécurisée des tokens
 
-### Structure de la base de données
+### 💾 Structure de la base de données
 
 ```mermaid
 erDiagram
@@ -101,9 +105,9 @@ erDiagram
     }
 ```
 
-## Architecture Frontend
+## 🎨 Architecture Frontend
 
-### Structure des modules
+### 📦 Structure des modules
 
 1. **Core Modules**
    - `dashboard.js`: Visualisation des KPIs et graphiques
@@ -120,9 +124,9 @@ erDiagram
    - Cache local des données
    - Rafraîchissement automatique (60s)
 
-## Flux de données
+## 🔄 Flux de données
 
-1. **Statistiques Jira**
+1. **📊 Statistiques Jira**
    ```mermaid
    sequenceDiagram
        Worker->>Jira: Fetch ticket data
@@ -135,7 +139,7 @@ erDiagram
        API-->>Frontend: Send formatted stats
    ```
 
-2. **Authentification**
+2. **🔐 Authentification**
    ```mermaid
    sequenceDiagram
        User->>Frontend: Login attempt
@@ -151,9 +155,9 @@ erDiagram
        API-->>Frontend: Auth token + user data
    ```
 
-## Sécurité
+## 🛡️ Sécurité
 
-### Mesures implémentées
+### 🔒 Mesures implémentées
 
 1. **Authentification**
    - Hashage bcrypt des mots de passe
@@ -170,18 +174,22 @@ erDiagram
    - Validation des entrées utilisateur
    - Tokens Jira et Google sécurisés
 
-### Bonnes pratiques
+### ✅ Bonnes pratiques
 
 - Variables d'environnement pour les secrets
 - Rotation régulière des credentials
 - Validation stricte des données entrantes
 - Logs sécurisés sans données sensibles
 
-## Déploiement
+## 🚀 Déploiement
 
 L'application utilise une architecture modulaire permettant un déploiement flexible :
 
-- Backend Flask avec Waitress comme serveur WSGI
-- MongoDB Atlas pour la scalabilité de la base de données
-- Intégration continue possible avec les variables d'environnement
-- Support du mode développement et production
+- 🌐 Backend Flask avec Waitress comme serveur WSGI
+- 💾 MongoDB Atlas pour la scalabilité de la base de données
+- 🔄 Intégration continue avec les variables d'environnement
+- 🛠️ Support des modes développement et production
+- 📊 Monitoring des performances
+- 🔒 Configuration sécurisée par défaut
+
+Pour plus de détails sur les versions et les mises à jour, consultez les [notes de version](https://github.com/nicolabcraft/Jira-Dashboard/releases).

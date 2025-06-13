@@ -1,29 +1,53 @@
-# Site Monitoring – Dashboard Jira & Gestion Utilisateurs
+# 📊 Site Monitoring – Dashboard Jira & Gestion Utilisateurs
 
-Application web moderne permettant de visualiser des statistiques Jira et gérer les utilisateurs de manière sécurisée.
+🌟 Application web moderne permettant de visualiser des statistiques Jira et gérer les utilisateurs de manière sécurisée.
 
-## Vue d'ensemble
+## 📦 Versions supportées
+
+| Version | Support            |
+| ------- | ------------------ |
+| 1.2.4   | :white_check_mark: |
+| 1.2.3   | :warning:          |
+| 1.2.2   | :warning:          |
+| 1.2.1   | :warning:          |
+| 1.2.0   | :x:                |
+| 1.1.0   | :x:                |
+| 1.0.0   | :x:                |
+| < 1.0   | :x:                |
+
+### 📝 Notes de version
+
+- **v1.2.3** : Dernières améliorations et corrections de bugs
+- **v1.2.2** : Optimisations de performance
+- **v1.2.1** : Corrections mineures
+- **v1.2.0** : Nouvelles fonctionnalités majeures
+- **v1.1.0** : Améliorations significatives
+- **v1.0.0** : Première version stable
+
+Pour plus de détails sur chaque version, consultez les [notes de version complètes](https://github.com/nicolabcraft/Jira-Dashboard/releases).
+
+## 🎯 Vue d'ensemble
 
 - **Frontend** : Application web responsive avec visualisation dynamique des données (Chart.js)
 - **Backend** : API REST Flask avec intégration Jira et authentification sécurisée
 - **Base de données** : MongoDB pour le stockage des utilisateurs, sessions et statistiques
 - **Intégrations** : API Jira, Google OAuth (SSO), Google Drive (exports)
 
-## Fonctionnalités principales
+## ✨ Fonctionnalités principales
 
-### Dashboard Jira
+### 📈 Dashboard Jira
 - Visualisation des KPIs et métriques clés
 - Suivi des tickets en temps réel
 - Génération de rapports dynamiques
 - Export des données vers Google Drive
 
-### Gestion des utilisateurs
+### 👥 Gestion des utilisateurs
 - Interface CRUD complète et sécurisée
 - Authentification locale ou SSO Google
 - Gestion des profils utilisateurs
 - Changement de mot de passe sécurisé
 
-### Sécurité renforcée
+### 🔒 Sécurité renforcée
 - Hashage bcrypt des mots de passe
 - Sessions MongoDB sécurisées
 - Migration automatique des anciens mots de passe
@@ -60,7 +84,7 @@ Application web moderne permettant de visualiser des statistiques Jira et gérer
    - http://localhost:5000/pages/profile.html (profil)
    - http://localhost:5000/pages/dashboard.html (dashboard)
 
-## Structure du projet
+## 📁 Structure du projet
 
 ```
 .
@@ -83,24 +107,25 @@ Application web moderne permettant de visualiser des statistiques Jira et gérer
     └── SECURITY.md       # Guide de sécurité
 ```
 
-## Documentation complémentaire
+## 📚 Documentation complémentaire
 
-- [Architecture détaillée](./architecture.md) - Vue d'ensemble technique
-- [Guide de sécurité](./SECURITY.md) - Bonnes pratiques et mesures de sécurité
+- [Architecture détaillée](./architecture.md) - Vue d'ensemble technique de l'application
+- [Guide de sécurité](./SECURITY.md) - Guide des bonnes pratiques et mesures de sécurité
+- [Notes de version](https://github.com/nicolabcraft/Jira-Dashboard/releases) - Historique des versions et changements
 
-## FAQ & Dépannage
+## ❓ FAQ & Dépannage
 
-### Authentification
+### 🔑 Authentification
 - **Ancien mot de passe non reconnu** : La première connexion avec un ancien mot de passe le migrera automatiquement vers le format sécurisé (bcrypt)
 - **Activation SSO Google** : Configurez les variables GOOGLE_* dans `.env` et assurez-vous que l'URL de redirection est autorisée dans la console Google Cloud
 
-### Fonctionnalités
+### ⚡ Fonctionnalités
 - **Ajout d'utilisateurs** : Via l'interface `/pages/users.html` ou l'API `/api/users` (POST)
 - **Export Google Drive** : Nécessite la configuration des variables GOOGLE_API_CREDENTIALS_PATH et GOOGLE_DRIVE_SHARE_EMAIL
 
-### API & Développement
+### 🔧 API & Développement
 - **Logs** : Consultez les logs du serveur Flask pour le diagnostic des erreurs
 
-## Licence
+## 📄 Licence
 
 MIT - Voir [LICENCE](./LICENCE) pour plus de détails
