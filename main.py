@@ -518,8 +518,8 @@ def api_tickets_recent():
     """Retourne les tickets des 30 derniers jours"""
     projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND createdDate >= -30d ORDER BY created DESC'
-    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=100)
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND status = Closed AND resolved >= -30d ORDER BY created DESC'
+    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated')
     tickets = []
     for t in issues:
         fields = t.get('fields', {})
@@ -539,8 +539,8 @@ def api_tickets_all():
     """Retourne tous les tickets sans limite de date"""
     projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) ORDER BY created DESC'
-    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=1000)
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND status != Closed ORDER BY created DESC'
+    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated')
     tickets = []
     for t in issues:
         fields = t.get('fields', {})
