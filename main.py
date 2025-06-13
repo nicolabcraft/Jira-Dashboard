@@ -132,8 +132,9 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     print(f"[Jira] Tickets totaux (30j): {total_tickets}")
     resolved_tickets = get_resolved_tickets()
     tickets_resolved = len(resolved_tickets)
+    tickets_open = total_tickets - tickets_resolved
     print(f"[Jira] Tickets résolus (30j): {tickets_resolved}")
-    support_health = int((tickets_resolved / total_tickets) * 100) if total_tickets else 0
+    support_health = int((tickets_open / tickets_resolved) * 100) if total_tickets else 0
     if support_health >= 80:
         support_health_label = 'Good'
     elif support_health >= 60:
