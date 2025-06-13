@@ -225,7 +225,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
 
     # Tickets créés vs résolus (filtre sur 30j)
     date_30d = (datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%d')
-    jql_cr = f'project = {proj} AND assignee IN ({assignees_str}) AND (created >= "{date_30d}" OR resolutiondate >= "{date_30d}")'
+    jql_cr = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d'
     issues_cr = fetch_jira_issues(jql_cr, fields='created,resolutiondate')
     print(f"[Jira] Tickets créés/résolus récupérés (30j): {len(issues_cr)}")
     created_per_day = defaultdict(int)
@@ -241,7 +241,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
             resolved_per_day[resolved_date] += 1
 
     # Tickets non résolus par jour (filtre sur 30j)
-    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created >= "{date_30d}" AND statusCategory != Done'
+    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d AND statusCategory != Done'
     issues_unresolved = fetch_jira_issues(jql_unresolved, fields='created')
     print(f"[Jira] Tickets non résolus récupérés (30j): {len(issues_unresolved)}")
     unresolved_per_day = defaultdict(int)
@@ -254,7 +254,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Tickets relancés et clôturés
     jql_relaunched = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = RelanceEnvoyee'
     relaunched = len(fetch_jira_issues(jql_relaunched, fields='labels'))
-    jql_closed = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = "RelanceClose" AND updatedDate > -30d'
+    jql_closed = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = "RelanceClose" AND resolved < -30d'
     closed = len(fetch_jira_issues(jql_closed, fields='labels'))
 
     # Stockage en base
@@ -560,8 +560,43 @@ def export_to_drive():
        print(f"Erreur lors de l'export vers Google Drive: {e}")
        return jsonify({'error': f'Une erreur est survenue: {e}'}), 500
 
-@app.route('/api/stats/relance')
-def api_stats_relance():
+@app.route('/api/stats/relance/current')
+def api_stats_relance_current():
+    """Statistiques de relance pour la période courante (30 derniers jours)"""
+    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    proj = JIRA_PROJECT_DEFAULT
+    
+    # Tickets relancés dans les 30 derniers jours
+    jql_relanced = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = RelanceEnvoyee AND createdDate >= -30d'
+    relanced_issues = fetch_jira_issues(jql_relanced, fields='id')
+    relanced_count = len(relanced_issues)
+
+    # Nombre de tickets totaux fermés dans les 30 derniers jours
+    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate >= -30d'
+    total_issues = fetch_jira_issues(jql_total, fields='id')
+    total_count = len(total_issues)
+
+    # Tickets clôturés avec relance
+    jql_closed_with_relance = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = "RelanceClose" AND resolved < -30d'
+    closed_with_relance_issues = fetch_jira_issues(jql_closed_with_relance, fields='id')
+    closed_with_relance_count = len(closed_with_relance_issues)
+
+    # Calcul du pourcentage
+    if relanced_count > 0:
+        percentage = (relanced_count / total_count) * 100
+    else:
+        percentage = 0
+
+    return jsonify({
+        'relanced_tickets': relanced_count,
+        'closed_with_relance': closed_with_relance_count,
+        'total_tickets': total_count,
+        'percentage': percentage
+    })
+
+@app.route('/api/stats/relance/period')
+def api_stats_relance_period():
+    """Statistiques de relance pour une période personnalisée"""
     start = request.args.get('startDate')
     end = request.args.get('endDate')
     if not start or not end:
@@ -575,13 +610,13 @@ def api_stats_relance():
     relanced_issues = fetch_jira_issues(jql_relanced, fields='id')
     relanced_count = len(relanced_issues)
 
-    # Nombre de ticket totals fermés dans la période
+    # Nombre de tickets totaux fermés dans la période
     jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate >= "{start}" AND createdDate <= "{end}"'
     total_issues = fetch_jira_issues(jql_total, fields='id')
     total_count = len(total_issues)
 
     # Tickets clôturés avec relance dans la période
-    jql_closed_with_relance = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = RelanceClose AND createdDate >= "{start}" AND createdDate <= "{end}"'
+    jql_closed_with_relance = f'project = {proj} AND assignee IN ({assignees_str}) AND labels = "RelanceClose" AND resolved >= "{start}" AND resolved <= "{end}"'
     closed_with_relance_issues = fetch_jira_issues(jql_closed_with_relance, fields='id')
     closed_with_relance_count = len(closed_with_relance_issues)
 

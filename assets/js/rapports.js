@@ -183,7 +183,6 @@ fetch('/api/get-google-drive-email')
             e.preventDefault();
             let year, month;
             const today = new Date();
-
             if (relanceStatsForm.stats_period.value === 'current') {
                 year = today.getFullYear();
                 month = today.getMonth() + 1;
@@ -211,7 +210,11 @@ fetch('/api/get-google-drive-email')
         relanceStatsResultsDiv.style.display = 'none';
 
         try {
-            const apiUrl = `/api/stats/relance?startDate=${startDate}&endDate=${endDate}`;
+            // Utiliser l'endpoint current pour la période courante
+            const apiUrl = relanceStatsForm.stats_period.value === 'current'
+                ? `/api/stats/relance/current`
+                : `/api/stats/relance/period?startDate=${startDate}&endDate=${endDate}`;
+            
             const resp = await fetch(apiUrl);
 
             if (!resp.ok) {
@@ -261,7 +264,7 @@ fetch('/api/get-google-drive-email')
         relanceStatsResultsDivAnnual.style.display = 'none';
 
         try {
-            const apiUrl = `/api/stats/relance?startDate=${startDate}&endDate=${endDate}`;
+            const apiUrl = `/api/stats/relance/period?startDate=${startDate}&endDate=${endDate}`;
             const resp = await fetch(apiUrl);
 
             if (!resp.ok) {
