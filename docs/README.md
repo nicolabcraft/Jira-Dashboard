@@ -6,10 +6,11 @@
 
 | Version | Support            |
 | ------- | ------------------ |
-| 1.2.4   | :white_check_mark: |
+| 1.3.0   | :white_check_mark: |
+| 1.2.4   | :warning:          |
 | 1.2.3   | :warning:          |
 | 1.2.2   | :warning:          |
-| 1.2.1   | :warning:          |
+| 1.2.1   | :x:                |
 | 1.2.0   | :x:                |
 | 1.1.0   | :x:                |
 | 1.0.0   | :x:                |
