@@ -763,7 +763,7 @@ def stats_update_worker():
             print(f"[Worker] Erreur lors de la mise à jour : {e}")
         time.sleep(300) # 5 minutes
 
-# -- get-google-drive-email
+# --- GET GOOGLE DRIVE EMAIL ---
 @app.route('/api/get-google-drive-email')
 def get_google_drive_email():
     """Retourne l'email du compte Google Drive configuré."""

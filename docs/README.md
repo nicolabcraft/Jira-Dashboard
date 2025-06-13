@@ -46,6 +46,8 @@ Ce projet est une application web Flask permettant de gérer des utilisateurs (C
    GOOGLE_CLIENT_ID=...
    GOOGLE_CLIENT_SECRET=...
    GOOGLE_REDIRECT_URI=http://localhost:5000/api/login/google/callback
+   GOOGLE_API_CREDENTIALS_PATH=/path/to/your/google_api_credentials.json
+   GOOGLE_DRIVE_SHARE_EMAIL=your_google_drive_share_email
    PORT=5000
    ```
 4. **Lancez le serveur** :
@@ -85,6 +87,9 @@ Ce projet est une application web Flask permettant de gérer des utilisateurs (C
 
 **Q : Comment activer le SSO Google ?**
 > Renseignez les variables `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, et `GOOGLE_REDIRECT_URI` dans `.env`.
+
+**Q : Comment activer les exports Google Drive ?**
+> Renseignez les variables `GOOGLE_API_CREDENTIALS_PATH` et `GOOGLE_DRIVE_SHARE_EMAIL` dans `.env`.
 
 ## Licence
 MIT
