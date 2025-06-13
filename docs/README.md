@@ -1,18 +1,58 @@
-# Site Monitoring – Gestion des Utilisateurs & Dashboard Jira
+# 📊 Site Monitoring – Dashboard Jira & Gestion Utilisateurs
 
-Ce projet est une application web Flask permettant de gérer des utilisateurs (CRUD sécurisé avec MongoDB) et de visualiser des statistiques Jira (tickets, KPIs, rapports, etc.).
+🌟 Application web moderne permettant de visualiser des statistiques Jira et gérer les utilisateurs de manière sécurisée.
 
-## Fonctionnalités principales
+## 📦 Versions supportées
 
-- **Authentification sécurisée** (bcrypt, session MongoDB, SSO Google)
-- **Gestion des utilisateurs** (création, édition, suppression, listing, changement de mot de passe)
-- **Affichage du profil** (infos à jour, changement de mot de passe pour comptes locaux)
-- **Dashboard Jira** (KPIs, tickets, rapports dynamiques)
-- **Sécurité** :
-  - Mots de passe jamais exposés
-  - Hashage automatique des anciens mots de passe en clair à la connexion
-  - Validation stricte des ObjectId
-  - Messages d’erreur neutres (anti-énumération)
+| Version | Support            |
+| ------- | ------------------ |
+| 1.2.4   | :white_check_mark: |
+| 1.2.3   | :warning:          |
+| 1.2.2   | :warning:          |
+| 1.2.1   | :warning:          |
+| 1.2.0   | :x:                |
+| 1.1.0   | :x:                |
+| 1.0.0   | :x:                |
+| < 1.0   | :x:                |
+
+### 📝 Notes de version
+
+- **v1.2.3** : Dernières améliorations et corrections de bugs
+- **v1.2.2** : Optimisations de performance
+- **v1.2.1** : Corrections mineures
+- **v1.2.0** : Nouvelles fonctionnalités majeures
+- **v1.1.0** : Améliorations significatives
+- **v1.0.0** : Première version stable
+
+Pour plus de détails sur chaque version, consultez les [notes de version complètes](https://github.com/nicolabcraft/Jira-Dashboard/releases).
+
+## 🎯 Vue d'ensemble
+
+- **Frontend** : Application web responsive avec visualisation dynamique des données (Chart.js)
+- **Backend** : API REST Flask avec intégration Jira et authentification sécurisée
+- **Base de données** : MongoDB pour le stockage des utilisateurs, sessions et statistiques
+- **Intégrations** : API Jira, Google OAuth (SSO), Google Drive (exports)
+
+## ✨ Fonctionnalités principales
+
+### 📈 Dashboard Jira
+- Visualisation des KPIs et métriques clés
+- Suivi des tickets en temps réel
+- Génération de rapports dynamiques
+- Export des données vers Google Drive
+
+### 👥 Gestion des utilisateurs
+- Interface CRUD complète et sécurisée
+- Authentification locale ou SSO Google
+- Gestion des profils utilisateurs
+- Changement de mot de passe sécurisé
+
+### 🔒 Sécurité renforcée
+- Hashage bcrypt des mots de passe
+- Sessions MongoDB sécurisées
+- Migration automatique des anciens mots de passe
+- Validation stricte des données
+- Messages d'erreur neutres (anti-énumération)
 
 ## Installation
 
@@ -28,28 +68,12 @@ Ce projet est une application web Flask permettant de gérer des utilisateurs (C
    ```sh
    pip install -r requirements.txt
    ```
-3. **Créez un fichier `.env`** à la racine avec vos variables (exemple) :
-   ```env
-   MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net
-   MONGODB_DB=studiapijira
-   MONGODB_COLLECTION=stats
-   USERS_DB=users
-   USERS_COLLECTION=users
-   SESSION_DB=users
-   SESSION_COLLECTION=sessions
-   JIRA_URL=https://votreinstance.atlassian.net
-   JIRA_USERNAME=...@....
-   JIRA_TOKEN=...
-   JIRA_PROJECT_DEFAULT=HEL
-   JIRA_ASSIGNEES=nom1,nom2
-   SECRET_KEY=unsecret
-   GOOGLE_CLIENT_ID=...
-   GOOGLE_CLIENT_SECRET=...
-   GOOGLE_REDIRECT_URI=http://localhost:5000/api/login/google/callback
-   GOOGLE_API_CREDENTIALS_PATH=/path/to/your/google_api_credentials.json
-   GOOGLE_DRIVE_SHARE_EMAIL=your_google_drive_share_email
-   PORT=5000
-   ```
+3. **Configuration** : Créez un fichier `.env` à la racine en vous basant sur `.env.example` dans le dossier `docs/`. Les principales sections sont :
+   - Configuration MongoDB (connexion, bases de données)
+   - Paramètres d'authentification (secret key, Google OAuth)
+   - Configuration Jira (URL, credentials, projet par défaut)
+   - Intégration Google Drive (optionnel)
+   - Configuration serveur (port)
 4. **Lancez le serveur** :
    ```sh
    python main.py
@@ -60,36 +84,48 @@ Ce projet est une application web Flask permettant de gérer des utilisateurs (C
    - http://localhost:5000/pages/profile.html (profil)
    - http://localhost:5000/pages/dashboard.html (dashboard)
 
-## Structure du projet
+## 📁 Structure du projet
 
-- `main.py` : Backend Flask (API, sécurité, gestion utilisateurs, Jira)
-- `requirements.txt` : Dépendances Python
-- `assets/` :
-  - `js/` : scripts front (users.js, profile.js, etc.)
-  - `css/` : styles (modele.css, sidebar.css)
-  - `img/` : images et logos
-- `pages/` : pages HTML (users, profile, dashboard, etc.)
+```
+.
+├── main.py                 # Backend Flask (API REST)
+├── requirements.txt        # Dépendances Python
+├── assets/                 # Ressources statiques
+│   ├── js/                # Scripts frontend
+│   │   ├── dashboard.js   # Logique du dashboard
+│   │   ├── users.js       # Gestion utilisateurs
+│   │   └── ...
+│   ├── css/               # Styles
+│   └── img/               # Images et logos
+├── pages/                 # Pages HTML
+│   ├── dashboard.html     # Vue principale
+│   ├── users.html        # Gestion utilisateurs
+│   └── ...
+└── docs/                 # Documentation
+    ├── .env.example      # Template configuration
+    ├── architecture.md   # Documentation technique
+    └── SECURITY.md       # Guide de sécurité
+```
 
-## Sécurité & bonnes pratiques
-- Les mots de passe sont toujours hashés (bcrypt)
-- Les anciens comptes avec mot de passe en clair sont automatiquement migrés au hash lors de la connexion
-- Les endpoints API ne révèlent jamais le mot de passe
-- Les erreurs d’authentification sont neutres
-- Les ObjectId sont validés côté backend
+## 📚 Documentation complémentaire
 
-## FAQ
+- [Architecture détaillée](./architecture.md) - Vue d'ensemble technique de l'application
+- [Guide de sécurité](./SECURITY.md) - Guide des bonnes pratiques et mesures de sécurité
+- [Notes de version](https://github.com/nicolabcraft/Jira-Dashboard/releases) - Historique des versions et changements
 
-**Q : Je n’arrive pas à me connecter, mon mot de passe date d’avant la migration ?**
-> Connectez-vous une fois avec votre ancien mot de passe, il sera automatiquement sécurisé (hashé) pour les prochaines connexions.
+## ❓ FAQ & Dépannage
 
-**Q : Comment ajouter un utilisateur ?**
-> Utilisez la page `/pages/users.html` ou l’API `/api/users` (POST).
+### 🔑 Authentification
+- **Ancien mot de passe non reconnu** : La première connexion avec un ancien mot de passe le migrera automatiquement vers le format sécurisé (bcrypt)
+- **Activation SSO Google** : Configurez les variables GOOGLE_* dans `.env` et assurez-vous que l'URL de redirection est autorisée dans la console Google Cloud
 
-**Q : Comment activer le SSO Google ?**
-> Renseignez les variables `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, et `GOOGLE_REDIRECT_URI` dans `.env`.
+### ⚡ Fonctionnalités
+- **Ajout d'utilisateurs** : Via l'interface `/pages/users.html` ou l'API `/api/users` (POST)
+- **Export Google Drive** : Nécessite la configuration des variables GOOGLE_API_CREDENTIALS_PATH et GOOGLE_DRIVE_SHARE_EMAIL
 
-**Q : Comment activer les exports Google Drive ?**
-> Renseignez les variables `GOOGLE_API_CREDENTIALS_PATH` et `GOOGLE_DRIVE_SHARE_EMAIL` dans `.env`.
+### 🔧 API & Développement
+- **Logs** : Consultez les logs du serveur Flask pour le diagnostic des erreurs
 
-## Licence
-MIT
+## 📄 Licence
+
+MIT - Voir [LICENCE](./LICENCE) pour plus de détails
