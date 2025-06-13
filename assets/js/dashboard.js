@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
     document.getElementById('kpi-total').textContent = kpis.total_open_tickets;
-    document.getElementById('kpi-resolved').textContent = kpis.tickets_resolved;
+    document.getElementById('kpi-resolved').textContent = kpis.tickets_closed;
     document.getElementById('kpi-relaunched').textContent = kpis.relaunch_sent || kpis.relaunched || 0;
     document.getElementById('kpi-closed').textContent = kpis.relaunch_closed || kpis.closed || 0;
     // Update support health icons

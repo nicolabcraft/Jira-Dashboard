@@ -119,7 +119,7 @@ def get_resolved_tickets(projectKey=None):
     """
     proj = projectKey or JIRA_PROJECT_DEFAULT
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND resolved >= -30d'
+    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate >= -30d'
     return fetch_jira_issues(jql, fields='assignee,resolutiondate,status')
 
 # --- FONCTION POUR METTRE À JOUR LES STATS DASHBOARD EN BASE ---
@@ -139,16 +139,22 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     tickets_resolved = len(resolved_tickets)
     
     # Récupère tous les tickets non résolus (sans limite de date)
-    jql_open = f'project = {proj} AND assignee IN ({assignees_str}) AND status != Closed'
-    open_issues = fetch_jira_issues(jql_open, fields='id')
-    tickets_open = len(open_issues)
+    # Récupère les tickets avec status = Closed
+    jql_closed = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate > -30d'
+    closed_issues = fetch_jira_issues(jql_closed, fields='id,status,created')
+    tickets_closed = len(closed_issues)
     
-    # Le total est la somme des tickets ouverts et résolus
-    total_tickets = tickets_open + tickets_resolved
-    print(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, résolus: {tickets_resolved})")
-    print(f"[Jira] Tickets résolus (30j): {tickets_resolved}")
-    # Calcul de la santé du support : 100% = tous les tickets sont résolus, 0% = aucun ticket résolu
-    support_health = int((tickets_resolved / total_tickets) * 100) if total_tickets else 100
+    # Les tickets ouverts sont tous les tickets moins les fermés
+    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
+    total_issues = fetch_jira_issues(jql_total, fields='id')
+    tickets_open = len(total_issues) - tickets_closed
+    
+    # Le total est la somme des tickets ouverts et fermés
+    total_tickets = len(total_issues)
+    print(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, fermés: {tickets_closed})")
+    
+    # Calcul de la santé du support : 100% = tous les tickets sont fermés, 0% = aucun ticket fermé
+    support_health = int((tickets_closed / total_tickets) * 100) if total_tickets else 100
     if support_health >= 80:
         support_health_label = 'Good'  # 80-100% des tickets sont résolus
     elif support_health >= 60:
@@ -275,8 +281,8 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Stockage en base
     stats = {
         'total_tickets': total_tickets,
-        'total_open_tickets': total_tickets - tickets_resolved,
-        'tickets_resolved': tickets_resolved,
+        'total_open_tickets': tickets_open,
+        'tickets_closed': tickets_closed,
         'support_health': support_health,
         'support_health_label': support_health_label,
         'progress': progress,
@@ -777,7 +783,7 @@ def get_users():
     return jsonify([user_to_dict(u) for u in users])
 
 @app.route('/api/users', methods=['POST'])
-@login_required
+@admin_required
 def add_user():
     data = request.json
     required_fields = ["name", "email", "username", "password", "role"]
@@ -856,16 +862,21 @@ def get_google_drive_email():
 def restart_server():
     """Redémarre le serveur Python via une commande système"""
     try:
-        # Sur Windows, utiliser 'start' pour lancer un nouveau processus
-        if os.name == 'nt':
-            os.system(f'start /B python {os.path.abspath(__file__)}')
-            os._exit(0)
-        # Sur Unix, utiliser nohup
-        else:
-            os.system(f'nohup python {os.path.abspath(__file__)} &')
-            os._exit(0)
-            
-        return jsonify({"success": True, "message": "Serveur en cours de redémarrage"})
+        # Envoyer une réponse au client avant de redémarrer
+        response = jsonify({"success": True, "message": "Serveur en cours de redémarrage"})
+        response.status_code = 200
+        
+        def restart_logic():
+            time.sleep(1)  # Attendre avant de redémarrer
+            if os.name == 'nt':
+                os.system(f'start /B python {os.path.abspath(__file__)}')
+                os._exit(0)
+            else:
+                os.system(f'nohup python {os.path.abspath(__file__)} &')
+                os._exit(0)
+        
+        threading.Thread(target=restart_logic).start()
+        return response
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

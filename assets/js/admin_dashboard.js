@@ -107,7 +107,7 @@ async function getLast30DaysData() {
 
         return {
             openTickets: kpisData.total_open_tickets || 0,
-            resolvedTickets: kpisData.tickets_resolved || 0,
+            resolvedTickets: kpisData.tickets_closed || 0,
             totalTickets: kpisData.total_tickets || 0,
             averageResolutionTime: avgResolutionTime,
             slaTrend: slaTrend,
