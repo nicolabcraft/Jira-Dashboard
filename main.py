@@ -134,25 +134,31 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
 
     # Calcul des stats comme dans /api/kpis
     assignees_str = ','.join([f'"{a}"' for a in assignees_list])
-    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
-    total_issues = fetch_jira_issues(jql_total, fields='id')
-    total_tickets = len(total_issues)
-    print(f"[Jira] Tickets totaux (30j): {total_tickets}")
+    # Récupère les tickets résolus des 30 derniers jours
     resolved_tickets = get_resolved_tickets()
     tickets_resolved = len(resolved_tickets)
-    tickets_open = total_tickets - tickets_resolved
+    
+    # Récupère tous les tickets non résolus (sans limite de date)
+    jql_open = f'project = {proj} AND assignee IN ({assignees_str}) AND status != Closed'
+    open_issues = fetch_jira_issues(jql_open, fields='id')
+    tickets_open = len(open_issues)
+    
+    # Le total est la somme des tickets ouverts et résolus
+    total_tickets = tickets_open + tickets_resolved
+    print(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, résolus: {tickets_resolved})")
     print(f"[Jira] Tickets résolus (30j): {tickets_resolved}")
-    support_health = int((tickets_open / tickets_resolved) * 100) if total_tickets else 0
+    # Calcul de la santé du support : 100% = tous les tickets sont résolus, 0% = aucun ticket résolu
+    support_health = int((tickets_resolved / total_tickets) * 100) if total_tickets else 100
     if support_health >= 80:
-        support_health_label = 'Good'
+        support_health_label = 'Good'  # 80-100% des tickets sont résolus
     elif support_health >= 60:
-        support_health_label = 'Fair'
+        support_health_label = 'Fair'  # 60-79% des tickets sont résolus
     elif support_health >= 40:
-        support_health_label = 'Warning'
+        support_health_label = 'Warning'  # 40-59% des tickets sont résolus
     elif support_health >= 20:
-        support_health_label = 'Bad'
+        support_health_label = 'Bad'  # 20-39% des tickets sont résolus
     else:
-        support_health_label = 'Critical'
+        support_health_label = 'Critical'  # 0-19% des tickets sont résolus
     objectif = 500
     progress = int((tickets_resolved / objectif) * 100) if objectif else 0
     # Tickets par Type de Demande (remplace le leaderboard)
@@ -250,7 +256,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
             resolved_per_day[resolved_date] += 1
 
     # Tickets non résolus par jour (filtre sur 30j)
-    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d AND statusCategory != Done'
+    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d AND status != Closed'
     issues_unresolved = fetch_jira_issues(jql_unresolved, fields='created')
     print(f"[Jira] Tickets non résolus récupérés (30j): {len(issues_unresolved)}")
     unresolved_per_day = defaultdict(int)
@@ -345,7 +351,7 @@ def get_default_stats_id():
     return f"{proj}_{'_'.join(assignees_list)}"
 
 @app.route('/api/kpis')
-@admin_required
+@login_required
 def api_kpis():
     # Fallback: read default dashboard stats from Mongo
     if not mongo_ok:
@@ -361,7 +367,7 @@ def api_kpis():
     return jsonify(stats)
 
 @app.route('/api/stats')
-@admin_required
+@login_required
 def api_stats():
     if not mongo_ok:
         return jsonify({'error': 'MongoDB non accessible'}), 500
