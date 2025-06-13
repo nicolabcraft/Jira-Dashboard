@@ -4,6 +4,7 @@ from flask_session import Session
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+import sys
 import requests
 from requests_oauthlib import OAuth2Session
 from datetime import datetime, timedelta, timezone
@@ -55,7 +56,14 @@ while not mongo_ok:
 
 # --- Flask Session config for MongoDB ---
 app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app) # Active CORS pour toutes les routes
+# Configuration CORS plus détaillée
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 app.config['SESSION_TYPE'] = 'mongodb'
 app.config['SESSION_MONGODB'] = mongo_client
 app.config['SESSION_MONGODB_DB'] = SESSION_DB
@@ -111,7 +119,7 @@ def get_resolved_tickets(projectKey=None):
     """
     proj = projectKey or JIRA_PROJECT_DEFAULT
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
-    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND statusCategory = Done AND resolved >= -30d'
+    jql = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate >= -30d'
     return fetch_jira_issues(jql, fields='assignee,resolutiondate,status')
 
 # --- FONCTION POUR METTRE À JOUR LES STATS DASHBOARD EN BASE ---
@@ -126,25 +134,37 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
 
     # Calcul des stats comme dans /api/kpis
     assignees_str = ','.join([f'"{a}"' for a in assignees_list])
-    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
-    total_issues = fetch_jira_issues(jql_total, fields='id')
-    total_tickets = len(total_issues)
-    print(f"[Jira] Tickets totaux (30j): {total_tickets}")
+    # Récupère les tickets résolus des 30 derniers jours
     resolved_tickets = get_resolved_tickets()
     tickets_resolved = len(resolved_tickets)
-    tickets_open = total_tickets - tickets_resolved
-    print(f"[Jira] Tickets résolus (30j): {tickets_resolved}")
-    support_health = int((tickets_open / tickets_resolved) * 100) if total_tickets else 0
+    
+    # Récupère tous les tickets non résolus (sans limite de date)
+    # Récupère les tickets avec status = Closed
+    jql_closed = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate > -30d'
+    closed_issues = fetch_jira_issues(jql_closed, fields='id,status,created')
+    tickets_closed = len(closed_issues)
+    
+    # Les tickets ouverts sont tous les tickets moins les fermés
+    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
+    total_issues = fetch_jira_issues(jql_total, fields='id')
+    tickets_open = len(total_issues) - tickets_closed
+    
+    # Le total est la somme des tickets ouverts et fermés
+    total_tickets = len(total_issues)
+    print(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, fermés: {tickets_closed})")
+    
+    # Calcul de la santé du support : 100% = tous les tickets sont fermés, 0% = aucun ticket fermé
+    support_health = int((tickets_closed / total_tickets) * 100) if total_tickets else 100
     if support_health >= 80:
-        support_health_label = 'Good'
+        support_health_label = 'Good'  # 80-100% des tickets sont résolus
     elif support_health >= 60:
-        support_health_label = 'Fair'
+        support_health_label = 'Fair'  # 60-79% des tickets sont résolus
     elif support_health >= 40:
-        support_health_label = 'Warning'
+        support_health_label = 'Warning'  # 40-59% des tickets sont résolus
     elif support_health >= 20:
-        support_health_label = 'Bad'
+        support_health_label = 'Bad'  # 20-39% des tickets sont résolus
     else:
-        support_health_label = 'Critical'
+        support_health_label = 'Critical'  # 0-19% des tickets sont résolus
     objectif = 500
     progress = int((tickets_resolved / objectif) * 100) if objectif else 0
     # Tickets par Type de Demande (remplace le leaderboard)
@@ -242,7 +262,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
             resolved_per_day[resolved_date] += 1
 
     # Tickets non résolus par jour (filtre sur 30j)
-    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d AND statusCategory != Done'
+    jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d AND status != Closed'
     issues_unresolved = fetch_jira_issues(jql_unresolved, fields='created')
     print(f"[Jira] Tickets non résolus récupérés (30j): {len(issues_unresolved)}")
     unresolved_per_day = defaultdict(int)
@@ -261,8 +281,8 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Stockage en base
     stats = {
         'total_tickets': total_tickets,
-        'total_open_tickets': total_tickets - tickets_resolved,
-        'tickets_resolved': tickets_resolved,
+        'total_open_tickets': tickets_open,
+        'tickets_closed': tickets_closed,
         'support_health': support_health,
         'support_health_label': support_health_label,
         'progress': progress,
@@ -301,6 +321,26 @@ def user_to_dict(user):
 
 from functools import wraps
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return jsonify({'error': 'Authentification requise'}), 401
+        
+        # Vérifier si l'utilisateur est admin
+        user = users_collection.find_one({
+            '$or': [
+                {'username': session['user']},
+                {'email': session['user']}
+            ]
+        })
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Accès non autorisé'}), 403
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -317,6 +357,7 @@ def get_default_stats_id():
     return f"{proj}_{'_'.join(assignees_list)}"
 
 @app.route('/api/kpis')
+@login_required
 def api_kpis():
     # Fallback: read default dashboard stats from Mongo
     if not mongo_ok:
@@ -471,25 +512,35 @@ def api_projects():
     data = resp.json().get('values', [])
     return jsonify([{ 'key': p.get('key'), 'name': p.get('name') } for p in data])
 
-@app.route('/api/tickets')
-def api_tickets():
-    projectKey = request.args.get('projectKey')
-    teamId = request.args.get('teamId')
-    if not projectKey or not teamId:
-        return jsonify({'error':'projectKey and teamId required'}),400
-    # Fetch team members via Jira REST API
-    team_url = f"{JIRA_URL.rstrip('/')}/rest/api/3/people/team/{teamId}"
-    resp = requests.get(team_url, auth=(JIRA_USERNAME, JIRA_TOKEN))
-    if resp.status_code != 200:
-        return jsonify({'error':'jira error','details':resp.text}), resp.status_code
-    members = [m.get('accountId') for m in resp.json().get('values',[]) if m.get('accountId')]
-    if not members:
-        return jsonify([])  # no team members
-    assignees_str = ','.join([f'"{a}"' for a in members])
-    # Fetch issues from Jira
-    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) ORDER BY created DESC'
+@app.route('/api/tickets/recent')
+@admin_required
+def api_tickets_recent():
+    """Retourne les tickets des 30 derniers jours"""
+    projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
+    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND createdDate >= -30d ORDER BY created DESC'
     issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=100)
-    # Simplify payload
+    tickets = []
+    for t in issues:
+        fields = t.get('fields', {})
+        tickets.append({
+            'key': t.get('key'),
+            'summary': fields.get('summary'),
+            'status': fields.get('status',{}).get('name'),
+            'assignee': fields.get('assignee',{}).get('displayName'),
+            'created': fields.get('created'),
+            'updated': fields.get('updated'),
+        })
+    return jsonify(tickets)
+
+@app.route('/api/tickets/all')
+@admin_required
+def api_tickets_all():
+    """Retourne tous les tickets sans limite de date"""
+    projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
+    assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+    jql = f'project = {projectKey} AND assignee IN ({assignees_str}) ORDER BY created DESC'
+    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated', max_results=1000)
     tickets = []
     for t in issues:
         fields = t.get('fields', {})
@@ -732,7 +783,7 @@ def get_users():
     return jsonify([user_to_dict(u) for u in users])
 
 @app.route('/api/users', methods=['POST'])
-@login_required
+@admin_required
 def add_user():
     data = request.json
     required_fields = ["name", "email", "username", "password", "role"]
@@ -805,6 +856,38 @@ def get_google_drive_email():
     """Retourne l'email du compte Google Drive configuré."""
     google_drive_email = os.getenv('GOOGLE_DRIVE_SHARE_EMAIL')
     return jsonify({"email": google_drive_email})
+
+@app.route('/api/restart', methods=['POST'])
+@admin_required
+def restart_server():
+    """Redémarre le serveur Python via une commande système"""
+    try:
+        # Envoyer une réponse au client avant de redémarrer
+        response = jsonify({"success": True, "message": "Serveur en cours de redémarrage"})
+        response.status_code = 200
+        
+        def restart_logic():
+            time.sleep(1)  # Attendre avant de redémarrer
+            if os.name == 'nt':
+                os.system(f'start /B python {os.path.abspath(__file__)}')
+                os._exit(0)
+            else:
+                os.system(f'nohup python {os.path.abspath(__file__)} &')
+                os._exit(0)
+        
+        threading.Thread(target=restart_logic).start()
+        return response
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/restart', methods=['OPTIONS'])
+def restart_server_options():
+    """Gère les requêtes OPTIONS pour /api/restart"""
+    response = jsonify({'success': True})
+    response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 if __name__ == '__main__':
     load_dotenv()
