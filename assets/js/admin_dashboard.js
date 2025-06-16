@@ -69,6 +69,13 @@ async function getLast30DaysData() {
         // Trier les tickets récents par date de mise à jour pour le SLA
         const sortedRecentTickets = recentTickets
             .filter(ticket => ticket.status === 'Done' || ticket.status === 'Fermée')
+            .filter(ticket => {
+                if (ticket.labels && Array.isArray(ticket.labels)) {
+                    return !ticket.labels.includes('RelanceClose');
+                } else {
+                    return true; // Inclure les tickets sans étiquettes ou avec labels non définis
+                }
+            })
             .sort((a, b) => new Date(b.updated) - new Date(a.updated));
 
         // Calculer le SLA actuel (30 derniers tickets résolus)

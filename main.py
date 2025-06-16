@@ -519,7 +519,7 @@ def api_tickets_recent():
     projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
     jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND status = Closed AND resolved >= -30d ORDER BY created DESC'
-    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated')
+    issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated,labels')
     tickets = []
     for t in issues:
         fields = t.get('fields', {})
@@ -530,6 +530,7 @@ def api_tickets_recent():
             'assignee': fields.get('assignee',{}).get('displayName'),
             'created': fields.get('created'),
             'updated': fields.get('updated'),
+            'labels': fields.get('labels', []),
         })
     return jsonify(tickets)
 
