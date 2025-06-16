@@ -77,14 +77,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             el.style.borderRadius = '16px';
             el.style.boxShadow = 'none';
             el.style.padding = '4px';
-            
-            // Ajouter le titre avec le pourcentage arrondi
-            el.title = `Support Health: ${Math.round(pct)}%`;
-            
-            // Ajouter les événements hover
-            el.addEventListener('mouseenter', () => {
-                el.style.cursor = 'pointer';
-            });
         } else {
             el.style.background = 'none';
             el.style.border = '3px solid transparent';

@@ -197,13 +197,13 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
         if name != 'Inconnu':
             request_type_counts[name] += 1
 
-    # Traiter les données pour le top 4 + "Autre"
+    # Traiter les données pour le top 5 + "Autre"
     sorted_types = request_type_counts.most_common()
-    top_4_types = sorted_types[:4]
-    other_types = sorted_types[4:]
-    
-    request_types_data = [{'name': name, 'score': score} for name, score in top_4_types]
-    
+    top_5_types = sorted_types[:5]
+    other_types = sorted_types[5:]
+
+    request_types_data = [{'name': name, 'score': score} for name, score in top_5_types]
+
     if other_types:
         other_score = sum(score for _, score in other_types)
         # Le tooltip sera généré côté client, on envoie juste les détails
