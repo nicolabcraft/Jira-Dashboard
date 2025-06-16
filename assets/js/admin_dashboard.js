@@ -130,11 +130,10 @@ function updateKPIs(data) {
     // Mise à jour du SLA
     const slaElement = document.getElementById('kpi-sla');
     const slaTrendElement = document.getElementById('sla-trend');
-    
+
     if (data.averageResolutionTime > 0) {
         slaElement.textContent = formatTime(data.averageResolutionTime);
-        
-        // Affichage de la tendance du SLA
+    
         const trend = data.slaTrend;
         const isImprovement = trend > 0;
         const trendIcon = isImprovement ? '../assets/img/down.svg' : '../assets/img/up.svg';
