@@ -136,7 +136,7 @@ function updateKPIs(data) {
     
         const trend = data.slaTrend;
         const isImprovement = trend > 0;
-        const trendIcon = isImprovement ? '../assets/img/down.svg' : '../assets/img/up.svg';
+        const trendIcon = isImprovement ? '../assets/img/up.svg' : '../assets/img/down.svg';
         const trendText = isImprovement ? 'Plus rapide' : 'Plus lent';
         const trendColor = isImprovement ? '#4CAF50' : '#f44336';
         
