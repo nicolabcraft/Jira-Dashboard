@@ -167,16 +167,12 @@ sequenceDiagram
 ```mermaid
 gitGraph
     commit id: "Initial commit"
-    branch feature/login
-    checkout feature/login
-    commit id: "Add login functionality"
+    branch dev
+    checkout dev
+    commit id: "Fonctionnality"
     checkout main
-    merge feature/login id: "Merge login feature"
-    branch feature/dashboard
-    checkout feature/dashboard
-    commit id: "Add dashboard UI"
-    checkout main
-    merge feature/dashboard id: "Merge dashboard feature"
+    merge dev id: "Merge dev into main"
+    commit id: "Release vX.X.X"
 ```
 
 ### 🗺️ Diagramme RD
