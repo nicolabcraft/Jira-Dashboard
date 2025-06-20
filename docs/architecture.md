@@ -4,49 +4,75 @@
 
 ## 🎯 Vue d'ensemble
 
+### 📂 Modules JavaScript
+Les fichiers JavaScript suivants jouent un rôle clé dans l'application :
+- `admin_dashboard.js` : Gestion des KPI, mise à jour de la santé du support, et interactions avec l'API.
+- `dashboard.js` : Visualisation des données via Chart.js et gestion des erreurs.
+- `rapports.js` : Génération de rapports et intégration avec Google Drive.
+- `users.js` : Gestion des utilisateurs via l'API.
+- `particles.js` : Effets visuels pour l'interface utilisateur.
+- `sidebar.js` : Gestion des préférences utilisateur et du menu.
+
+### 🔄 Flux de données supplémentaires
+```mermaid
+sequenceDiagram
+    Frontend->>API: Fetch user data
+    API->>MongoDB: Query user collection
+    MongoDB-->>API: Return user data
+    API-->>Frontend: Send user data
+    Frontend->>Google Drive: Export report
+    Google Drive-->>Frontend: Confirmation
+```
+
 ```mermaid
 graph TD
     subgraph "Frontend (Browser)"
         A[Pages HTML/CSS]
         B[JavaScript Modules]
         C[Chart.js Visualizations]
+        D[Particles.js Effects]
+        E[Sidebar Preferences]
         A --> B
         B --> C
+        B --> D
+        B --> E
     end
 
     subgraph "Backend (Flask)"
-        D[API REST]
-        E[Worker Thread]
-        F[Authentication]
-        G[Session Manager]
-        D <--> E
-        D <--> F
+        F[API REST]
+        G[Worker Thread]
+        H[Authentication]
+        I[Session Manager]
         F <--> G
+        F <--> H
+        H <--> I
     end
 
     subgraph "Storage"
-        H[MongoDB Atlas]
+        J[MongoDB Atlas]
         subgraph "Collections"
-            I[Stats]
-            J[Users]
-            K[Sessions]
+            K[Stats]
+            L[Users]
+            M[Sessions]
         end
-        H --> I
-        H --> J
-        H --> K
+        J --> K
+        J --> L
+        J --> M
     end
 
     subgraph "External Services"
-        L[Jira API]
-        M[Google OAuth]
-        N[Google Drive]
+        N[Jira API]
+        O[Google OAuth]
+        P[Google Drive]
     end
 
-    B -- "API Calls" --> D
-    E -- "Stats Update" --> I
-    F -- "Auth" --> M
-    D -- "Ticket Data" --> L
-    D -- "Export" --> N
+    B -- "API Calls" --> F
+    G -- "Stats Update" --> K
+    H -- "Auth" --> O
+    F -- "Ticket Data" --> N
+    F -- "Export" --> P
+    F -- "User Data" --> L
+    B -- "Export Reports" --> P
 ```
 
 ## 🔧 Architecture Backend
@@ -125,6 +151,46 @@ erDiagram
    - Rafraîchissement automatique (60s)
 
 ## 🔄 Flux de données
+
+### 📊 Diagramme de séquence
+```mermaid
+sequenceDiagram
+    Frontend->>API: Fetch user data
+    API->>MongoDB: Query user collection
+    MongoDB-->>API: Return user data
+    API-->>Frontend: Send user data
+    Frontend->>Google Drive: Export report
+    Google Drive-->>Frontend: Confirmation
+```
+
+### 🛠️ Gitgraph
+```mermaid
+gitGraph
+    commit id: "Initial commit"
+    branch feature/login
+    checkout feature/login
+    commit id: "Add login functionality"
+    checkout main
+    merge feature/login id: "Merge login feature"
+    branch feature/dashboard
+    checkout feature/dashboard
+    commit id: "Add dashboard UI"
+    checkout main
+    merge feature/dashboard id: "Merge dashboard feature"
+```
+
+### 🗺️ Diagramme RD
+```mermaid
+graph RL
+    A[Frontend] --> B[Backend]
+    B --> C[Database]
+    C --> D[External Services]
+    D --> E[Google Drive]
+    D --> F[Jira API]
+    B --> G[Authentication]
+    G --> H[OAuth]
+    G --> I[Session Manager]
+```
 
 1. **📊 Statistiques Jira**
    ```mermaid
