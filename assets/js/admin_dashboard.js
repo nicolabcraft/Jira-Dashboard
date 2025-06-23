@@ -386,3 +386,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     });
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('force-data').addEventListener('click', async () => {
+    if (!confirm('Êtes-vous sûr de vouloir forcer la récupération des données ?')) {
+        return;
+    }
+
+    const button = document.getElementById('force-data');
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> Chargement...';
+
+    try {
+        const response = await fetch('/api/update_stats', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        // Si le serveur se ferme avant d'envoyer la réponse, considérer que c'est un succès
+        if (!response.ok && response.status !== 502 && response.status !== 503 && response.status !== 504) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Essayer de parser la réponse JSON
+        try {
+            const data = await response.json();
+            if (data.success) {
+                button.innerHTML = '<span class="material-symbols-rounded">check_circle</span> Mise à jour en cours...';
+            }
+        } catch (e) {
+            // Si on ne peut pas parser la réponse JSON, c'est probablement que le serveur redémarre déjà
+            button.innerHTML = '<span class="material-symbols-rounded">check_circle</span> Mise à jour en cours...';
+        }
+
+        // Dans tous les cas, recharger la page après 5 secondes
+        setTimeout(() => {
+            window.location.reload();
+        }, 10000);
+    } catch (error) {
+        console.error('Erreur:', error);
+        button.innerHTML = '<span class="material-symbols-rounded">error</span> Erreur de mise à jour';
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }, 3000);
+    }
+    });
+});
