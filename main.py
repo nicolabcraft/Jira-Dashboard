@@ -1,13 +1,28 @@
-from flask import Flask, jsonify, request, session, redirect, url_for
+from flask import Flask, jsonify, request, session, redirect
 from flask_cors import CORS
 from flask_session import Session
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
-import sys
+import logging
 import requests
 from requests_oauthlib import OAuth2Session
 from datetime import datetime, timedelta, timezone
+
+def get_minutes_between_dates(start_date, end_date):
+    """
+    Calculate the time difference between two dates in minutes.
+    Handles cases where the date format is invalid or missing.
+    Supports timezone-aware formats like '+0200'.
+    """
+    try:
+        # Handle timezone-aware formats
+        start = datetime.strptime(start_date, '%Y-%m-%dT%H:%M:%S.%f%z')
+        end = datetime.strptime(end_date, '%Y-%m-%dT%H:%M:%S.%f%z')
+        return round((end - start).total_seconds() / 60)
+    except (ValueError, TypeError) as e:
+        print(f"Error parsing dates: {e}")
+        return 0
 from collections import Counter, defaultdict
 import threading
 import time
@@ -36,6 +51,9 @@ USERS_DB = os.getenv("USERS_DB", "users")  # NEW: db for users
 USERS_COLLECTION = os.getenv("USERS_COLLECTION", "users")  # NEW: collection for users
 SESSION_DB = os.getenv("SESSION_DB", "users")  # NEW: db for sessions
 SESSION_COLLECTION = os.getenv("SESSION_COLLECTION", "sessions")  # NEW: collection for sessions
+BACKUP_MONGODB_URI = os.getenv("MONGODB_URI")
+BACKUP_MONGODB_DB = os.getenv("BACKUP_MONGODB_DB", "backup")
+BACKUP_MONGODB_COLLECTION = os.getenv("BACKUP_MONGODB_COLLECTION", "data")
 
 # Connexion MongoDB Atlas avec réessai automatique
 mongo_ok = False
@@ -49,9 +67,9 @@ while not mongo_ok:
         session_db = mongo_client[SESSION_DB]  # session db
         mongo_client.server_info()  # Test connexion
         mongo_ok = True
-        print('[MongoDB] Connexion réussie')
+        logging.info('[MongoDB] Connexion réussie')
     except Exception as e:
-        print(f"[MongoDB] Connexion échouée : {e}. Nouvelle tentative dans 5s...")
+        logging.error(f"[MongoDB] Connexion échouée : {e}. Nouvelle tentative dans 5s...")
         time.sleep(5)
 
 # --- Flask Session config for MongoDB ---
@@ -103,7 +121,7 @@ def fetch_jira_issues(jql, fields=None, max_results=100):
     while True:
         resp = requests.get(url, headers=headers, params=params, auth=auth)
         if resp.status_code != 200:
-            print(f"[Jira] Erreur {resp.status_code}: {resp.text}")
+            logging.error(f"[Jira] Erreur {resp.status_code}: {resp.text}")
             break
         data = resp.json()
         issues = data.get('issues', [])
@@ -129,7 +147,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     assignees_list = assignees_override if assignees_override is not None else JIRA_ASSIGNEES
     # Compute composite id for storage
     id_key = f"{proj}_{'_'.join(assignees_list)}"
-    print(f"[Jira] Mise à jour des stats pour projet {proj} et assignees {assignees_list}")
+    logging.info(f"[Jira] Mise à jour des stats pour projet {proj} et assignees {assignees_list}")
 
 
     # Calcul des stats comme dans /api/kpis
@@ -151,7 +169,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     
     # Le total est la somme des tickets ouverts et fermés
     total_tickets = len(total_issues)
-    print(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, fermés: {tickets_closed})")
+    logging.info(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, fermés: {tickets_closed})")
     
     # Calcul de la santé du support : 100% = tous les tickets sont fermés, 0% = aucun ticket fermé
     support_health = int((tickets_closed / total_tickets) * 100) if total_tickets else 100
@@ -173,7 +191,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     jql_request_type = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND "Request Type" IS NOT EMPTY'
     # Le champ pour "Request Type" peut varier, on essaie les plus courants
     issues_request_type = fetch_jira_issues(jql_request_type, fields='customfield_10001,customfield_10002,issuetype')
-    print(f"[Jira] Tickets par type de demande récupérés: {len(issues_request_type)}")
+    logging.info(f"[Jira] Tickets par type de demande récupérés: {len(issues_request_type)}")
     
     request_type_counts = Counter()
     for ticket in issues_request_type:
@@ -214,7 +232,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Tickets par statut
     jql_status = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
     issues_status = fetch_jira_issues(jql_status, fields='status')
-    print(f"[Jira] Tickets par statut récupérés: {len(issues_status)}")
+    logging.info(f"[Jira] Tickets par statut récupérés: {len(issues_status)}")
     status_counts = Counter()
     for ticket in issues_status:
         status = ticket['fields'].get('status', {}).get('name', 'Inconnu')
@@ -224,7 +242,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Tickets par pôle
     jql_dept = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND "Départements / Pôles[Select List (cascading)]" IS NOT EMPTY'
     issues_dept = fetch_jira_issues(jql_dept, fields='customfield_12002')
-    print(f"[Jira] Tickets par pôle récupérés: {len(issues_dept)}")
+    logging.info(f"[Jira] Tickets par pôle récupérés: {len(issues_dept)}")
     department_counts = Counter()
     for ticket in issues_dept:
         department = ticket['fields'].get('customfield_12002', 'Autre')
@@ -236,7 +254,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Tickets par étiquette
     jql_label = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND status = Closed ORDER BY created ASC'
     issues_label = fetch_jira_issues(jql_label, fields='labels')
-    print(f"[Jira] Tickets par étiquette récupérés: {len(issues_label)}")
+    logging.info(f"[Jira] Tickets par étiquette récupérés: {len(issues_label)}")
     label_counts = Counter()
     for ticket in issues_label:
         labels = ticket['fields'].get('labels', [])
@@ -248,7 +266,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     date_30d = (datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%d')
     jql_cr = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d'
     issues_cr = fetch_jira_issues(jql_cr, fields='created,resolutiondate')
-    print(f"[Jira] Tickets créés/résolus récupérés (30j): {len(issues_cr)}")
+    logging.info(f"[Jira] Tickets créés/résolus récupérés (30j): {len(issues_cr)}")
     created_per_day = defaultdict(int)
     resolved_per_day = defaultdict(int)
     for ticket in issues_cr:
@@ -264,7 +282,7 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     # Tickets non résolus par jour (filtre sur 30j)
     jql_unresolved = f'project = {proj} AND assignee IN ({assignees_str}) AND created > -30d AND status != Closed'
     issues_unresolved = fetch_jira_issues(jql_unresolved, fields='created')
-    print(f"[Jira] Tickets non résolus récupérés (30j): {len(issues_unresolved)}")
+    logging.info(f"[Jira] Tickets non résolus récupérés (30j): {len(issues_unresolved)}")
     unresolved_per_day = defaultdict(int)
     for ticket in issues_unresolved:
         created_str = ticket['fields'].get('created')
@@ -303,10 +321,159 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     if mongo_ok and not return_data:
         # Store stats per project-team key
         mongo_stats.replace_one({'_id': id_key}, {**stats, '_id': id_key}, upsert=True)
-        print(f'[MongoDB] Stats sauvegardées pour {id_key}.')
+        logging.info(f'[MongoDB] Stats sauvegardées pour {id_key}.')
     if return_data:
         return stats
 
+def backup_dashboard_stats():
+    """Sauvegarde les stats du dashboard dans la base de données backup."""
+    try:
+        backup_mongo_client = MongoClient(BACKUP_MONGODB_URI, serverSelectionTimeoutMS=3000)
+        backup_mongo_db = backup_mongo_client[BACKUP_MONGODB_DB]
+        backup_mongo_data = backup_mongo_db[BACKUP_MONGODB_COLLECTION]
+
+        # Récupère les stats de la base de données principale
+        id_key = get_default_stats_id()
+        stats = mongo_stats.find_one({'_id': id_key})
+        if not stats:
+            stats = mongo_stats.find_one({'_id': 'dashboard'})
+        if stats:
+            # Supprime l'id pour éviter les conflits
+            stats.pop('_id', None)
+            # Insère les stats dans la base de données backup
+            backup_mongo_data.insert_one(stats)
+            logging.info(f"[MongoDB Backup] Stats sauvegardées dans la base de données backup.")
+        else:
+            logging.warning(f"[MongoDB Backup] Stats non trouvées dans la base de données principale.")
+        backup_mongo_client.close()
+    except Exception as e:
+        logging.error(f"[MongoDB Backup] Erreur lors de la sauvegarde : {e}")
+    finally:
+        if 'backup_mongo_client' in locals():
+            backup_mongo_client.close()
+
+
+def backup_admin_dashboard_stats():
+    """Sauvegarde les stats du dashboard admin dans la base de données backup."""
+    backup_mongo_client = None
+    try:
+        backup_mongo_client = MongoClient(BACKUP_MONGODB_URI, serverSelectionTimeoutMS=3000)
+        backup_mongo_db = backup_mongo_client[BACKUP_MONGODB_DB]
+        backup_mongo_data = backup_mongo_db[BACKUP_MONGODB_COLLECTION]
+
+        # Définition des URLs des API
+        KPIs_URL = 'http://127.0.0.1/api/kpis'
+        STATS_URL = 'http://127.0.0.1/api/stats'
+        RECENT_TICKETS_URL = 'http://127.0.0.1/api/tickets/recent'
+        ALL_TICKETS_URL = 'http://127.0.0.1/api/tickets/all'
+
+        # Générer une clé API aléatoire si elle n'existe pas dans le fichier .env
+        API_KEY = os.environ.get('API_KEY')
+
+        # Utilisation d'une session requests pour améliorer les performances
+        with requests.Session() as session:
+            # Ajouter la clé API aux headers des requêtes
+            session.headers.update({'X-API-Key': API_KEY})
+
+            # Récupère les données des API avec gestion des erreurs
+            kpis_response = session.get(KPIs_URL)
+            kpis_response.raise_for_status()  # Lève une exception pour les codes d'erreur HTTP
+
+            stats_response = session.get(STATS_URL)
+            stats_response.raise_for_status()
+
+            recent_tickets_response = session.get(RECENT_TICKETS_URL)
+            recent_tickets_response.raise_for_status()
+
+            all_tickets_response = session.get(ALL_TICKETS_URL)
+            all_tickets_response.raise_for_status()
+
+            # Vérifie si les requêtes ont réussi
+            if kpis_response.status_code != 200 or stats_response.status_code != 200 or recent_tickets_response.status_code != 200 or all_tickets_response.status_code != 200:
+                print(f"[MongoDB Backup] Erreur lors de la récupération des données des API Jira.")
+                return
+
+            # Convertit les réponses en JSON
+            kpis_data = kpis_response.json()
+            stats_data = stats_response.json()
+            recent_tickets_data = recent_tickets_response.json()
+            all_tickets_data = all_tickets_response.json()
+
+
+            # Calculer le SLA réel à partir des tickets résolus
+            total_resolution_time = 0
+            resolved_count = 0
+
+            # Trier les tickets récents par date de mise à jour pour le SLA
+            sorted_recent_tickets = sorted(
+                (ticket for ticket in recent_tickets_data if ticket.get('status') in ['Done', 'Fermée']),
+                key=lambda t: t.get('updated', '')
+            )
+
+            # Calculer le SLA actuel (30 derniers tickets résolus)
+            for ticket in sorted_recent_tickets[:30]:
+                # Vérifie si le ticket est dans un statut valide pour le SLA
+                if ticket.get('status') in ['Done', 'Fermée']:
+                    resolution_time = get_minutes_between_dates(ticket.get('created'), ticket.get('updated'))
+                    total_resolution_time += resolution_time
+                    resolved_count += 1
+                total_resolution_time += resolution_time
+                resolved_count += 1
+
+            avg_resolution_time = round(total_resolution_time / resolved_count) if resolved_count > 0 else 0
+
+            # Préparer les données des assignés (pour resolved-by-assignee, utiliser les tickets récents)
+            assignees = {}
+            for ticket in recent_tickets_data:
+                name = ticket.get('assignee')
+                if name not in assignees:
+                    assignees[name] = {'name': name, 'resolvedCount': 0}
+                # Increment resolvedCount for closed tickets
+                if ticket.get('status') == 'Fermée':
+                    assignees[name]['resolvedCount'] += 1
+
+            # Convertir l'objet en tableau et trier par nombre de tickets résolus
+            resolved_list = sorted(assignees.values(), key=lambda x: x['resolvedCount'], reverse=True)
+
+            # Traiter les données des assignés à partir de recent_tickets_data
+            # Calculate assignedCount using allTickets
+            assignees = {}
+            for ticket in all_tickets_data:
+                name = ticket.get('assignee')
+                if not name:
+                    continue
+                if name not in assignees:
+                    assignees[name] = {'name': name, 'assignedCount': 0}
+                if ticket.get('status') != 'Fermée':
+                    assignees[name]['assignedCount'] += 1
+
+            # Convertir l'objet en tableau et trier par nombre de tickets résolus
+            assignees_list = sorted(assignees.values(), key=lambda x: x['assignedCount'], reverse=True)
+
+            # Combine les données et les formate pour correspondre à la structure du dashboard admin
+            formatted_data = {
+                "openTickets": kpis_data.get('total_open_tickets', 0),
+                "resolvedTickets": kpis_data.get('tickets_closed', 0),
+                "totalTickets": kpis_data.get('total_tickets', 0),
+                "averageResolutionTime": avg_resolution_time,
+                "supportHealth": kpis_data.get('support_health', 0) / 100,
+                "assignees": assignees_list,
+                "resolvedByAssignee": resolved_list,
+                "allTickets": all_tickets_data  # Stocker allTickets dans l'objet data
+            }
+
+
+            # Insère les données formatées dans la base de données backup
+            backup_mongo_data.insert_one(formatted_data)
+            logging.info(f"[MongoDB Backup] Stats du dashboard admin sauvegardées dans la base de données backup.")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur lors de la récupération des données de l'API : {e}")
+    except Exception as e:
+        print(f"[MongoDB Backup] Erreur lors de la sauvegarde des stats du dashboard admin : {e}")
+    finally:
+        if backup_mongo_client:
+            backup_mongo_client.close()
 def user_to_dict(user):
     return {
         "id": str(user.get("_id")),
@@ -344,6 +511,12 @@ def admin_required(f):
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if 'X-API-Key' in request.headers:
+            # Vérification de la clé API
+            api_key = request.headers.get('X-API-Key')
+            if api_key != os.getenv('API_KEY'):
+                return jsonify({'error': 'Clé API invalide'}), 403
+            return f(*args, **kwargs)
         if 'user' not in session:
             return jsonify({'error': 'Authentification requise'}), 401
         
@@ -527,7 +700,7 @@ def api_projects():
     return jsonify([{ 'key': p.get('key'), 'name': p.get('name') } for p in data])
 
 @app.route('/api/tickets/recent')
-@admin_required
+@login_required
 def api_tickets_recent():
     """Retourne les tickets des 30 derniers jours"""
     projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
@@ -548,7 +721,7 @@ def api_tickets_recent():
     return jsonify(tickets)
 
 @app.route('/api/tickets/all')
-@admin_required
+@login_required
 def api_tickets_all():
     """Retourne tous les tickets sans limite de date"""
     projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
@@ -587,7 +760,7 @@ def export_to_drive():
    
    credentials_path = os.getenv('GOOGLE_API_CREDENTIALS_PATH')
    if not credentials_path or not os.path.exists(credentials_path):
-       print(f"Erreur: Le fichier de credentials '{credentials_path}' est introuvable.")
+       logging.error(f"Erreur: Le fichier de credentials '{credentials_path}' est introuvable.")
        return jsonify({'error': 'Configuration du serveur Google Drive incomplète.'}), 500
 
    try:
@@ -614,7 +787,7 @@ def export_to_drive():
            fields='id, webViewLink'
        ).execute()
        
-       print(f"Fichier uploadé avec succès. ID: {file.get('id')}")
+       logging.info(f"Fichier uploadé avec succès. ID: {file.get('id')}")
        
        return jsonify({
            'success': True,
@@ -623,7 +796,7 @@ def export_to_drive():
        })
 
    except Exception as e:
-       print(f"Erreur lors de l'export vers Google Drive: {e}")
+       logging.error(f"Erreur lors de l'export vers Google Drive: {e}")
        return jsonify({'error': f'Une erreur est survenue: {e}'}), 500
 
 @app.route('/api/stats/relance/current')
@@ -749,7 +922,7 @@ def get_current_user():
     })
     if not user:
         # Si aucun user trouvé, retourne au moins le username pour compatibilité
-        print('[API /api/user] Aucun utilisateur trouvé, retour minimal')
+        logging.warning('[API /api/user] Aucun utilisateur trouvé, retour minimal')
         return jsonify({'username': session['user']})
     return jsonify(user_to_dict(user))
 
@@ -862,6 +1035,16 @@ def stats_update_worker():
             print("[Worker] Mise à jour des statistiques terminée.")
         except Exception as e:
             print(f"[Worker] Erreur lors de la mise à jour : {e}")
+        try:
+            backup_dashboard_stats()
+            print("[Worker] Sauvegarde des statistiques terminée.")
+        except Exception as e:
+            print(f"[Worker] Erreur lors de la sauvegarde : {e}")
+        try:
+            backup_admin_dashboard_stats()
+            print("[Worker] Sauvegarde des stats du dashboard admin terminée.")
+        except Exception as e:
+            print(f"[Worker] Erreur lors de la sauvegarde des stats du dashboard admin : {e}")
         time.sleep(300) # 5 minutes
 
 # --- GET GOOGLE DRIVE EMAIL ---
