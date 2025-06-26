@@ -8,8 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Login with username/password
         const loginBtn = document.getElementById('submit');
-        loginBtn.addEventListener('click', async e => {
-            e.preventDefault();
+        const handleLogin = async () => {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             if (username && password) {
@@ -30,6 +29,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 alert('Veuillez entrer un utilisateur et un mot de passe valides');
+            }
+        };
+
+        loginBtn.addEventListener('click', async e => {
+            e.preventDefault();
+            await handleLogin();
+        });
+
+        // Trigger login on Enter key press
+        const passwordField = document.getElementById('password');
+        passwordField.addEventListener('keydown', async e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                await handleLogin();
             }
         });
         // Google SSO

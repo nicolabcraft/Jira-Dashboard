@@ -346,6 +346,20 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
             return jsonify({'error': 'Authentification requise'}), 401
+        
+        # Vérification de l'expiration du token
+        user = users_collection.find_one({
+            '$or': [
+                {'username': session['user']},
+                {'email': session['user']}
+            ]
+        })
+        if user and 'token_expiration' in user:
+            expiration = user['token_expiration']
+            if datetime.now(timezone.utc) > expiration:
+                session.pop('user', None)
+                return jsonify({'error': 'Session expirée, veuillez vous reconnecter'}), 401
+        
         return f(*args, **kwargs)
     return decorated_function
 
