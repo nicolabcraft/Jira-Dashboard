@@ -329,17 +329,21 @@ if (window.Chart && Chart.defaults) {
 function prepareTopData(rawData, topN = 5) {
     const entries = Object.entries(rawData).sort((a, b) => b[1] - a[1]);
     const top = entries.slice(0, topN);
-    const otherCount = entries.slice(topN).reduce((sum, [, v]) => sum + v, 0);
+    const others = entries.slice(topN);
+    const otherCount = others.reduce((sum, [, v]) => sum + v, 0);
+    const otherDetails = others.map(([name, score]) => ({ name, score }));
+
     if (otherCount > 0) {
-        top.push(['Autre', otherCount]);
+        top.push(['Autre', otherCount, otherDetails]);
     }
     const labels = top.map(([k]) => k);
     const data = top.map(([, v]) => v);
-    return { labels, data };
+    const details = top.map(([, , d]) => d || null); // Ajoute les détails ou null si non applicable
+    return { labels, data, details };
 }
 
 function renderDoughnutChart(ctx, rawData) {
-    const { labels, data } = prepareTopData(rawData);
+    const { labels, data, details } = prepareTopData(rawData);
     const backgroundColor = labels.map((_, i) => chartColors[i % chartColors.length]);
 
     const chartEl = (typeof ctx === 'string') ? document.getElementById(ctx) : ctx;
@@ -385,12 +389,23 @@ function renderDoughnutChart(ctx, rawData) {
             backgroundColor: tooltipBackground,
             titleColor: tooltipTextColor,
             bodyColor: tooltipTextColor,
+            displayColors: false, // Masque les petits carrés de couleur
             callbacks: {
                 label(tooltipItem) {
+                const label = tooltipItem.label;
                 const val = tooltipItem.parsed;
                 const total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
-                return `${tooltipItem.label}: ${val} (${percentage}%)`;
+
+                if (label === 'Autre' && details[tooltipItem.dataIndex]) {
+                    let detailLines = [`${label}: ${val} (${percentage}%)`];
+                    details[tooltipItem.dataIndex].forEach(d => {
+                        const detailPercentage = total ? ((d.score / total) * 100).toFixed(1) : 0;
+                        detailLines.push(`  - ${d.name}: ${d.score} (${detailPercentage}%)`);
+                    });
+                    return detailLines;
+                }
+                return `${label}: ${val} (${percentage}%)`;
                 }
             }
             }
