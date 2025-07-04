@@ -146,7 +146,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         max: 100 // Définir une valeur maximale pour l'axe Y
                     }
                 },
-                plugins: {}
+                plugins: {
+                    zoom: {
+                        pan: {
+                            enabled: false,
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        }
+                    }
+                }
             }
         });
 
@@ -174,6 +189,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: false,
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        }
                     }
                 },
                 scales: {
@@ -215,7 +244,22 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: {},
+                plugins: {
+                    zoom: {
+                        pan: {
+                            enabled: false,
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        }
+                    }
+                },
                 scales: {
                     yHealth: {
                         type: 'linear',
@@ -326,7 +370,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: true,
                 scales: { y: { beginAtZero: true } },
-                plugins: {}
+                plugins: {
+                    zoom: {
+                        pan: {
+                            enabled: false,
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        }
+                    }
+                }
             }
         });
 
@@ -354,7 +413,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 responsive: true,
                 maintainAspectRatio: true,
                 scales: { y: { beginAtZero: true } },
-                plugins: {}
+                plugins: {
+                    zoom: {
+                        pan: {
+                            enabled: false,
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        }
+                    }
+                }
             }
         });
     };
