@@ -8,12 +8,15 @@ async function checkAndShowAdminButton() {
         
         const user = await response.json();
         const adminButton = document.querySelector('.nav-item a[href="admin_dashboard.html"]')?.parentElement;
-        
+        const visualizeButton = document.querySelector('.nav-item a[href="visualise.html"]')?.parentElement;
+
         if (adminButton) {
             if (user.role === 'admin') {
                 adminButton.style.display = 'block';
+                visualizeButton.style.display = 'block';
             } else {
                 adminButton.style.display = 'none';
+                visualizeButton.style.display = 'none';
             }
         }
     } catch (error) {

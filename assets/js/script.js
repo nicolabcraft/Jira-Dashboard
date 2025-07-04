@@ -153,9 +153,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        // Users page: admin only
-        if (path === 'users.html') {
-            // Do nothing here! users.js handles all user management and rendering.
-        }
     }
 });
