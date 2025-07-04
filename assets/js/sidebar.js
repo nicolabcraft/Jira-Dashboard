@@ -8,7 +8,7 @@ async function checkAndShowAdminButton() {
         
         const user = await response.json();
         const adminButton = document.querySelector('.nav-item a[href="admin_dashboard.html"]')?.parentElement;
-        const visualizeButton = document.querySelector('.nav-item a[href="visualise.html"]')?.parentElement;
+        const visualizeButton = document.querySelector('.nav-item a[href="visualize.html"]')?.parentElement;
 
         if (adminButton) {
             if (user.role === 'admin') {
