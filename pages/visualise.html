@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualise - Tableau de bord des tickets</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/modele.css">
+    <link rel="stylesheet" href="../assets/css/visualise.css">
+    <link rel="stylesheet" href="../assets/css/sidebar.css">
+    <link rel="icon" href="../assets/img/favicon.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../assets/js/visualise.js" defer></script>
+    <script src="../assets/js/script.js" defer></script>
+    <script src="../assets/js/overlay.js" defer></script>
+    <script src="../assets/js/sidebar.js" defer></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
+</head>
+<body>
+  <aside class="sidebar">
+    <header class="sidebar-header">
+      <a href="#" class="header-logo">
+        <img src="../assets/img/logo-large.png" alt="Logo">
+      </a>
+      <button class="toggler sidebar-toggler">
+        <span class="material-symbols-rounded">chevron_left</span>
+      </button>
+      <button class="toggler menu-toggler">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+    </header>
+    <nav class="sidebar-nav">
+      <ul class="nav-list primary-nav">
+        <li class="nav-item">
+          <a href="dashboard.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">dashboard</span>
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <span class="nav-tooltip">Dashboard</span>
+        </li>
+        <li class="nav-item">
+          <a href="visualise.html" class="nav-link active">
+            <span class="nav-icon material-symbols-rounded">insights</span>
+            <span class="nav-label">Visualise</span>
+          </a>
+          <span class="nav-tooltip">Visualise</span>
+        </li>
+        <li class="nav-item" style="display: none;">
+          <a href="admin_dashboard.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">admin_panel_settings</span>
+            <span class="nav-label">Admin</span>
+          </a>
+          <span class="nav-tooltip">Admin</span>
+        </li>
+        <li class="nav-item">
+          <a href="rapports.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">bar_chart</span>
+            <span class="nav-label">Rapports</span>
+          </a>
+          <span class="nav-tooltip">Rapports</span>
+        </li>
+        <li class="nav-item">
+          <a href="users.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">group</span>
+            <span class="nav-label">Utilisateurs</span>
+          </a>
+          <span class="nav-tooltip">Utilisateurs</span>
+        </li>
+      </ul>
+      <ul class="nav-list secondary-nav">
+        <li class="nav-item">
+          <a href="profile.html" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">account_circle</span>
+            <span class="nav-label">Profile</span>
+          </a>
+          <span class="nav-tooltip">Profile</span>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <span class="nav-icon material-symbols-rounded">logout</span>
+            <span class="nav-label">Logout</span>
+          </a>
+          <span class="nav-tooltip">Logout</span>
+        </li>
+        <li class="nav-item">
+          <button class="theme-toggle" id="theme-toggle" title="Toggles light & dark" aria-label="auto" aria-live="polite">
+            <svg class="sun-and-moon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
+              <mask class="moon" id="moon-mask">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <circle cx="24" cy="10" r="6" fill="black" />
+              </mask>
+              <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor" />
+              <g class="sun-beams" stroke="currentColor">
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </g>
+            </svg>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="dashboard-title">Visualise - Analyse des tickets de support</div>
+
+    <!-- Section de filtres et sélecteur de dates -->
+    <div class="dashboard-row filters-section">
+        <div class="card">
+            <h3>Filtres et Période</h3>
+            <div class="filter-controls">
+                <label for="date-range-select">Période :</label>
+                <select id="date-range-select">
+                    <option value="day">Jour</option>
+                    <option value="week">Semaine</option>
+                    <option value="month" selected>Mois</option>
+                    <option value="year">Année</option>
+                    <option value="custom">Personnalisée</option>
+                </select>
+                <input type="date" id="start-date" style="display:none;">
+                <input type="date" id="end-date" style="display:none;">
+                <button id="apply-filters">Appliquer les filtres</button>
+                <button id="reset-zoom" style="margin-left: 10px;">Réinitialiser le Zoom</button>
+            </div>
+            <div class="additional-filters">
+                <label for="status-filter">Statut :</label>
+                <select id="status-filter">
+                    <option value="">Tous</option>
+                    <option value="open">Ouvert</option>
+                    <option value="resolved">Résolu</option>
+                    <option value="pending">En attente</option>
+                    <option value="closed">Fermé</option>
+                </select>
+                <label for="priority-filter">Priorité :</label>
+                <select id="priority-filter">
+                    <option value="">Toutes</option>
+                    <option value="low">Basse</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="high">Haute</option>
+                    <option value="urgent">Urgente</option>
+                </select>
+                <label for="type-filter">Type :</label>
+                <select id="type-filter">
+                    <option value="">Tous</option>
+                    <option value="bug">Bug</option>
+                    <option value="feature">Fonctionnalité</option>
+                    <option value="support">Support</option>
+                </select>
+                <label for="agent-filter">Agent :</label>
+                <select id="agent-filter">
+                    <option value="">Tous</option>
+                    <!-- Options agents dynamiques -->
+                </select>
+                <label for="department-filter">Département :</label>
+                <select id="department-filter">
+                    <option value="">Tous</option>
+                    <!-- Options départements dynamiques -->
+                </select>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Exportation des Données</h3>
+            <button id="export-csv">Exporter en CSV</button>
+            <button id="export-pdf">Exporter en PDF</button>
+            <button id="export-image">Exporter en Image</button>
+        </div>
+    </div>
+
+    <!-- Courbe de Tendance des Tickets -->
+    <div class="dashboard-row">
+      <div class="card card-full-height">
+        <h2>Courbe de Tendance des Tickets (Créés vs Résolus)</h2>
+        <div class="chart-controls">
+            <label for="granularity-select">Granularité :</label>
+            <select id="granularity-select">
+                <option value="daily">Quotidienne</option>
+                <option value="weekly">Hebdomadaire</option>
+                <option value="monthly">Mensuelle</option>
+            </select>
+            <label for="cumulative-toggle">Cumulé :</label>
+            <input type="checkbox" id="cumulative-toggle">
+        </div>
+        <canvas id="chart-ticket-trend" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+      </div>
+    </div>
+
+    <!-- Indicateurs Clés de Performance (KPI) du Support -->
+    <div class="dashboard-row kpi-section">
+        <div class="card">
+            <h2>Tendance des tickets non résolus</h2>
+            <div class="kpi-value" id="kpi-backlog">...</div>
+            <canvas id="chart-backlog-trend" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Tendance SLA et Santé du Support -->
+    <div class="dashboard-row">
+        <div class="card card-full-height">
+            <h2>Tendance SLA et Santé du Support</h2>
+            <canvas id="chart-health-sla-trend" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Tableau Récapitulatif par Agent -->
+    <div class="dashboard-row">
+        <div class="card card-full-height">
+            <h2>Performance par Agent</h2>
+            <input type="text" id="agent-search" placeholder="Rechercher un agent...">
+            <table id="agent-performance-table">
+                <thead>
+                    <tr>
+                        <th data-sort="agent-name">Nom de l'agent</th>
+                        <th data-sort="assigned-tickets">Tickets assignés</th>
+                        <th data-sort="resolved-tickets">Tickets résolus</th>
+                        <th data-sort="resolution-rate">Taux de résolution</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Données agents dynamiques -->
+                </tbody>
+            </table>
+            <div id="agent-tickets-overlay" class="overlay" style="display:none;">
+                <div class="overlay-content">
+                    <h3>Tickets de l'agent : <span id="overlay-agent-name"></span></h3>
+                    <ul id="overlay-ticket-list"></ul>
+                    <button class="close-overlay">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Courbe de Distribution des Tickets par Département et par Étiquette -->
+    <div class="dashboard-row">
+        <div class="card">
+            <h2>Tickets par Département</h2>
+            <div class="chart-controls">
+                <label for="department-status-filter">Statut :</label>
+                <select id="department-status-filter">
+                    <option value="">Tous</option>
+                    <option value="open">Ouvert</option>
+                    <option value="resolved">Résolu</option>
+                    <option value="pending">En attente</option>
+                    <option value="closed">Fermé</option>
+                </select>
+            </div>
+            <canvas id="chart-department-distribution" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+            <h3 style="margin-top: 20px;">Tendance par jour</h3>
+            <canvas id="chart-department-trend" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+        </div>
+        <div class="card">
+            <h2>Tickets par Étiquette (Tag)</h2>
+            <div class="chart-controls">
+                <label for="tag-filter">Filtrer par étiquette :</label>
+                <select id="tag-filter">
+                    <option value="">Toutes</option>
+                    <!-- Options étiquettes dynamiques -->
+                </select>
+            </div>
+            <canvas id="chart-tag-distribution" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+            <h3 style="margin-top: 20px;">Tendance par jour</h3>
+            <canvas id="chart-tag-trend" style="width:100%;background:transparent;border-radius:8px;"></canvas>
+        </div>
+    </div>
+
+
+  </main>
+</body>
+</html>

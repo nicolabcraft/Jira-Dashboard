@@ -11,6 +11,8 @@
   --sidebar-text: #151A2D;
   --sidebar-hover: #f1f1f1;
   --sidebar-hover-text: #151A2D;
+  --sidebar-active-bg: #e0e0e0;
+  --sidebar-active-color: #151A2D;
   --main-bg: linear-gradient(#F1FAFF, #CBE4FF);
   --card-bg: #fff;
   --icon-fill: #FFD600;
@@ -21,6 +23,8 @@
   --sidebar-text: #e0e0e0;
   --sidebar-hover: #353a4d;
   --sidebar-hover-text: #FFD600;
+  --sidebar-active-bg: #353a4d;
+  --sidebar-active-color: #FFD600;
   --main-bg: linear-gradient(#23263a, #151A2D);
   --card-bg: #2f3347; /* un peu moins clair qu'avant, mais plus visible que le fond */
   --icon-fill: #FFD600;
@@ -38,7 +42,7 @@ body, .main-bg {
   margin: 16px;
   border-radius: 16px;
   background: var(--sidebar-bg) !important;
-  color: var(--sidebar-text);
+  color: var(--sidebar-text) !important;
   height: calc(100vh - 32px);
   transition: all 0.4s ease;
   overflow: hidden;
@@ -87,7 +91,7 @@ body, .main-bg {
 }
 .sidebar-header .toggler span {
   font-size: 1.75rem;
-  color: var(--sidebar-text);
+  color: var(--sidebar-text) !important;
   transition: 0.4s ease;
 }
 .sidebar.collapsed .sidebar-header .toggler span {
@@ -136,6 +140,15 @@ body, .main-bg {
   background: var(--sidebar-hover);
   color: var(--sidebar-hover-text);
 }
+.nav-link.active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-color);
+}
+
+.nav-link.active .nav-icon {
+  color: var(--sidebar-active-color); /* Assurez-vous que l'icône est également colorée */
+}
+
 .sidebar-nav .nav-item {
   position: relative;
 }

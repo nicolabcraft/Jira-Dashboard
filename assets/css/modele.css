@@ -42,11 +42,7 @@ body {
   border-left: 4px solid transparent;
   transition: background 0.2s, color 0.2s, border 0.2s;
 }
-.sidebar nav a.active, .sidebar nav a:hover {
-  background: #232a36;
-  color: #7ecfff;
-  border-left: 4px solid #7ecfff;
-}
+
 .sidebar .bottom {
   margin-top: auto;
   padding-bottom: 32px;
@@ -168,7 +164,9 @@ button:active {
 
 /* Styles pour les graphiques qui doivent prendre toute la hauteur */
 .card-full-height {
-    height: auto;  /* container auto height, chart height via canvas */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .card-full-height canvas {
@@ -851,4 +849,3 @@ body.dark-mode .close-button:focus {
   z-index: 0;
   background-color: #0f121d;
 }
-

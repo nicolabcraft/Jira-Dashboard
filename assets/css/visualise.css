@@ -1,0 +1,206 @@
+/* Styles spécifiques à Visualise */
+.filters-section .card, .kpi-section .card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.filter-controls, .chart-controls, .additional-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-controls label, .chart-controls label, .additional-filters label {
+    font-weight: 500;
+    margin-right: 5px;
+}
+
+.filter-controls select, .filter-controls input[type="date"],
+.chart-controls select, .additional-filters select,
+.additional-filters input[type="text"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: var(--card-bg);
+    color: var(--sidebar-text);
+}
+
+.filter-controls button {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.filter-controls button:hover {
+    background-color: #0056b3;
+}
+
+.kpi-value {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: #007bff;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.kpi-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sla-summary {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.sla-summary p {
+    margin: 5px 0;
+    font-size: 1rem;
+}
+
+#agent-performance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+#agent-performance-table th,
+#agent-performance-table td {
+    border: 1px solid #eee;
+    padding: 10px;
+    text-align: left;
+}
+
+#agent-performance-table th {
+    background-color: #f8f8f8;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#agent-performance-table tbody tr:nth-child(even) {
+    background-color: #f4f4f4;
+}
+
+#agent-performance-table tbody tr:hover {
+    background-color: #e9e9e9;
+}
+
+#agent-search {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: var(--card-bg);
+    color: var(--sidebar-text);
+}
+
+.drill-down-button {
+    padding: 5px 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.drill-down-button:hover {
+    background-color: #218838;
+}
+
+/* Overlay Styles */
+.overlay {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5); /* Black background with opacity */
+  z-index: 1000; /* Specify a stack order in case you have other elements */
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%; /* Could be more or less, depending on screen size */
+  max-width: 500px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+  position: relative;
+}
+
+.close-overlay {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 5px 15px;
+    font-size: 1rem;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.close-overlay:hover,
+.close-overlay:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#overlay-ticket-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+#overlay-ticket-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#overlay-ticket-list li:last-child {
+    border-bottom: none;
+}
+
+.export-section {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.export-section button {
+    padding: 10px 20px;
+    margin-left: 10px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.export-section button:hover {
+    background-color: #5a6268;
+}

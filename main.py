@@ -162,14 +162,16 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
     closed_issues = fetch_jira_issues(jql_closed, fields='id,status,created')
     tickets_closed = len(closed_issues)
     
-    # Les tickets ouverts sont tous les tickets moins les fermés
-    jql_total = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
-    total_issues = fetch_jira_issues(jql_total, fields='id')
-    tickets_open = len(total_issues) - tickets_closed
+    # Les tickets ouverts (backlog) sont tous les tickets qui ne sont pas dans une catégorie "Done"
+    jql_open = f'project = {proj} AND assignee IN ({assignees_str}) AND statusCategory != Done'
+    open_issues = fetch_jira_issues(jql_open, fields='id')
+    tickets_open = len(open_issues)
     
-    # Le total est la somme des tickets ouverts et fermés
-    total_tickets = len(total_issues)
-    logging.info(f"[Jira] Tickets totaux: {total_tickets} (ouverts: {tickets_open}, fermés: {tickets_closed})")
+    # Le total des tickets pour le calcul de la santé est basé sur les tickets créés les 30 derniers jours
+    jql_total_30d = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d'
+    total_issues_30d = fetch_jira_issues(jql_total_30d, fields='id')
+    total_tickets = len(total_issues_30d)
+    logging.info(f"[Jira] Tickets totaux (30j pour la santé): {total_tickets} | Backlog (total ouvert): {tickets_open} | Fermés (30j): {tickets_closed}")
     
     # Calcul de la santé du support : 100% = tous les tickets sont fermés, 0% = aucun ticket fermé
     support_health = int((tickets_closed / total_tickets) * 100) if total_tickets else 100
@@ -241,25 +243,33 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
 
     # Tickets par pôle
     jql_dept = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND "Départements / Pôles[Select List (cascading)]" IS NOT EMPTY'
-    issues_dept = fetch_jira_issues(jql_dept, fields='customfield_12002')
+    issues_dept = fetch_jira_issues(jql_dept, fields='customfield_12002,created')
     logging.info(f"[Jira] Tickets par pôle récupérés: {len(issues_dept)}")
     department_counts = Counter()
+    department_trend = defaultdict(lambda: defaultdict(int))
     for ticket in issues_dept:
         department = ticket['fields'].get('customfield_12002', 'Autre')
         if isinstance(department, dict):
             department = department.get('value', 'Autre')
         department_counts[department] += 1
+        created_date = ticket['fields'].get('created', '')[:10]
+        if created_date:
+            department_trend[department][created_date] += 1
 
 
     # Tickets par étiquette
     jql_label = f'project = {proj} AND assignee IN ({assignees_str}) AND createdDate > -30d AND status = Closed ORDER BY created ASC'
-    issues_label = fetch_jira_issues(jql_label, fields='labels')
+    issues_label = fetch_jira_issues(jql_label, fields='labels,created')
     logging.info(f"[Jira] Tickets par étiquette récupérés: {len(issues_label)}")
     label_counts = Counter()
+    label_trend = defaultdict(lambda: defaultdict(int))
     for ticket in issues_label:
         labels = ticket['fields'].get('labels', [])
+        created_date = ticket['fields'].get('created', '')[:10]
         for label in labels:
             label_counts[label] += 1
+            if created_date:
+                label_trend[label][created_date] += 1
 
 
     # Tickets créés vs résolus (filtre sur 30j)
@@ -308,10 +318,12 @@ def update_dashboard_stats(return_data=False, projectKey=None, assignees_overrid
         'workload': request_types_data, # Gardé pour compatibilité si l'ancien nom est utilisé ailleurs
         'status_counts': dict(status_counts),
         'department_counts': dict(department_counts),
+        'department_trend': {k: dict(v) for k, v in department_trend.items()},
         'label_counts': dict(label_counts),
+        'label_trend': {k: dict(v) for k, v in label_trend.items()},
         'created_vs_resolved': {
             'created': dict(created_per_day),
-            'resolved': dict(resolved_per_day)
+            'resolved': dict(resolved_per_day),
         },
         'relaunch_sent': relaunched,
         'relaunch_closed': closed,
@@ -459,7 +471,8 @@ def backup_admin_dashboard_stats():
                 "supportHealth": kpis_data.get('support_health', 0) / 100,
                 "assignees": assignees_list,
                 "resolvedByAssignee": resolved_list,
-                "allTickets": all_tickets_data  # Stocker allTickets dans l'objet data
+                "allTickets": all_tickets_data,  # Stocker allTickets dans l'objet data
+                "updated_at": datetime.now(timezone.utc)
             }
 
 
@@ -740,6 +753,168 @@ def api_tickets_all():
             'updated': fields.get('updated'),
         })
     return jsonify(tickets)
+
+@app.route('/api/visualise/data')
+@login_required
+def api_visualise_data():
+    if not mongo_ok:
+        return jsonify({'error': 'MongoDB non accessible'}), 500
+
+    id_key = get_default_stats_id()
+    stats = mongo_stats.find_one({'_id': id_key})
+    if not stats:
+        stats = mongo_stats.find_one({'_id': 'dashboard'})
+        if not stats:
+            return jsonify({'error': 'Stats non trouvées'}), 404
+
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+    
+    # Filtrer les données de tendance par date
+    created_vs_resolved = stats.get('created_vs_resolved', {})
+    created_data = created_vs_resolved.get('created', {})
+    resolved_data = created_vs_resolved.get('resolved', {})
+
+    labels = []
+    created_values = []
+    resolved_values = []
+
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        today = datetime.now().date()
+        
+        if end_date > today:
+            end_date = today
+
+        delta = end_date - start_date
+
+        for i in range(delta.days + 1):
+            day = start_date + timedelta(days=i)
+            day_str = day.strftime("%Y-%m-%d")
+            labels.append(day_str)
+            created_values.append(created_data.get(day_str, 0))
+            resolved_values.append(resolved_data.get(day_str, 0))
+
+    # Calcul de la tendance du backlog en remontant le temps
+    backlog_trend = []
+    if start_date_str and end_date_str and labels:
+        current_backlog = stats.get('total_open_tickets', 0)
+        
+        daily_deltas = {label: created - resolved for label, created, resolved in zip(labels, created_values, resolved_values)}
+        
+        trend = [0] * len(labels)
+        trend[-1] = current_backlog
+
+        # Itérer à l'envers pour calculer les valeurs passées
+        for i in range(len(labels) - 2, -1, -1):
+            # Le backlog d'un jour = backlog du jour suivant - delta du jour suivant
+            delta_next_day = daily_deltas.get(labels[i+1], 0)
+            trend[i] = trend[i+1] - delta_next_day
+        
+        backlog_trend = trend
+
+
+    # Récupérer les données de performance des agents et les tendances SLA/Santé depuis la collection de backup
+    agent_performance = []
+    sla_trend_values = []
+    health_trend_values = []
+    
+    try:
+        backup_db = mongo_client[BACKUP_MONGODB_DB]
+        backup_collection = backup_db[BACKUP_MONGODB_COLLECTION]
+        total_tickets_from_backup = 0
+
+        # 1. Récupérer la dernière sauvegarde pour les performances des agents (état actuel)
+        latest_backup = backup_collection.find_one(sort=[("updated_at", -1)])
+        if latest_backup:
+            total_tickets_from_backup = latest_backup.get('totalTickets', 0)
+            all_tickets = latest_backup.get('allTickets', [])
+            agent_performance_data = {}
+            assignees_raw = latest_backup.get('assignees', [])
+            resolved_raw = latest_backup.get('resolvedByAssignee', [])
+
+            for item in assignees_raw:
+                name = item.get('name')
+                if name:
+                    agent_performance_data[name] = {
+                        'name': name,
+                        'assigned': item.get('assignedCount', 0),
+                        'resolved': 0,
+                        'tickets': [t['key'] for t in all_tickets if t.get('assignee') == name]
+                    }
+            
+            for item in resolved_raw:
+                name = item.get('name')
+                if name in agent_performance_data:
+                    agent_performance_data[name]['resolved'] = item.get('resolvedCount', 0)
+            
+            agent_performance = list(agent_performance_data.values())
+
+        # 2. Récupérer l'historique pour les tendances SLA et Santé
+        if start_date_str and end_date_str:
+            start_dt = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end_dt = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
+            
+            backup_cursor = backup_collection.find({
+                "updated_at": {
+                    "$gte": start_dt,
+                    "$lt": end_dt
+                }
+            }).sort("updated_at", 1)
+
+            # On ne veut qu'un point par jour pour la lisibilité du graphique
+            daily_data = {}
+            for backup in backup_cursor:
+                day_str = backup['updated_at'].strftime("%Y-%m-%d")
+                # On garde la dernière valeur de la journée
+                daily_data[day_str] = {
+                    'sla': backup.get('averageResolutionTime', 0),
+                    'health': backup.get('supportHealth', 0) * 100 # Conversion en pourcentage
+                }
+            
+            # Remplir les données pour chaque jour du range
+            for day_str in labels:
+                if day_str in daily_data:
+                    sla_trend_values.append(daily_data[day_str]['sla'])
+                    health_trend_values.append(daily_data[day_str]['health'])
+                else:
+                    # Si pas de données pour ce jour, on reporte la valeur précédente ou 0
+                    sla_trend_values.append(sla_trend_values[-1] if sla_trend_values else 0)
+                    health_trend_values.append(health_trend_values[-1] if health_trend_values else 0)
+
+    except Exception as e:
+        logging.error(f"Erreur lors de la récupération des données depuis le backup: {e}")
+
+    data = {
+        'ticketTrend': {
+            'labels': labels,
+            'created': created_values,
+            'resolved': resolved_values
+        },
+        'kpis': {
+            'backlog': stats.get('total_open_tickets', 0), # Le backlog actuel
+            'backlogTrend': backlog_trend,
+            'totalTickets': total_tickets_from_backup
+        },
+        'slaCompliance': {
+            'compliant': 0,
+            'violated': 0
+        },
+        'healthAndSlaTrend': {
+            'labels': labels,
+            'sla': sla_trend_values,
+            'health': health_trend_values
+        },
+        'agentPerformance': agent_performance,
+        'departmentDistribution': [{'name': k, 'count': v} for k, v in stats.get('department_counts', {}).items()],
+        'departmentTrend': stats.get('department_trend', {}),
+        'tagDistribution': [{'name': k, 'count': v} for k, v in stats.get('label_counts', {}).items()],
+        'tagTrend': stats.get('label_trend', {})
+    }
+
+    return jsonify(data)
+
 
 @app.route('/api/export/drive', methods=['POST'])
 @login_required
@@ -1045,7 +1220,7 @@ def stats_update_worker():
             print("[Worker] Sauvegarde des stats du dashboard admin terminée.")
         except Exception as e:
             print(f"[Worker] Erreur lors de la sauvegarde des stats du dashboard admin : {e}")
-        time.sleep(300) # 5 minutes
+        time.sleep(3600) # 1 heure
 
 # --- GET GOOGLE DRIVE EMAIL ---
 @app.route('/api/get-google-drive-email')
