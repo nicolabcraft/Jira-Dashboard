@@ -156,8 +156,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (statusContainer) { statusContainer.style.display = 'none'; }
         try {
             statusDataRaw = await fetchOrFallback('/tickets_by_status', {});
-            console.log('API /tickets_by_status:', statusDataRaw);
-            // Si la réponse n'est pas vide, on la stocke
             if (statusDataRaw && Object.keys(statusDataRaw).length > 0) {
                 lastStatusData = statusDataRaw;
             }
@@ -165,49 +163,76 @@ document.addEventListener('DOMContentLoaded', async function() {
             showError('Erreur de chargement des statuts', '#chart-status');
             return;
         }
-        
         const card = document.getElementById('chart-status')?.parentElement;
         if (!card) return;
-        
-        // Crée ou cible le conteneur pour les barres
         let barsDiv = card.querySelector('#status-bars');
         if (!barsDiv) {
             barsDiv = document.createElement('div');
             barsDiv.id = 'status-bars';
             card.appendChild(barsDiv);
         }
-        
-        // Utilise la dernière donnée connue si la réponse est vide
-        const dataToDisplay = (statusDataRaw && Object.keys(statusDataRaw).length > 0) ? statusDataRaw : lastStatusData;
-        
-        if (dataToDisplay && Object.keys(dataToDisplay).length > 0) {
-            const statusLabels = Object.keys(dataToDisplay);
-            const statusValues = Object.values(dataToDisplay);
-            const total = statusValues.reduce((a,b)=>a+b,0);
-            let statusArr = statusLabels.map((label, i) => ({
-                label,
-                value: statusValues[i],
-                percent: total ? (statusValues[i]/total*100) : 0
-            }));
-            statusArr = statusArr.sort((a,b)=>b.percent-a.percent);
-            let html = '<div style="display:flex;flex-direction:column;gap:12px;width:100%;">';
-            statusArr.forEach((s, i) => {
-                const color = chartColors[i % chartColors.length];
-                html += `<div style='width:100%;'>
-                    <div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;'>
-                        <span style='font-weight:600;'>${s.label}</span>
-                        <span style='font-size:0.95em;'>${s.percent.toFixed(1)}% <span style='color:#b0b8c9;'>(${s.value})</span></span>
-                    </div>
-                    <div style='height:14px;width:100%;background:#e8eef6;border-radius:6px;overflow:hidden;'>
-                        <div style='height:100%;width:${s.percent}%;background:${color};transition:width 0.3s ease-in-out'></div>
-                    </div>
-                </div>`;
-            });
-            html += '</div>';
-            barsDiv.innerHTML = html;
-        } else {
-            barsDiv.innerHTML = '<span style="color:#ff7e7e;text-align:center;width:100%;display:block;margin-top:20px;">Aucune donnée de statut</span>';
+        const dataToDisplay = (statusDataRaw && typeof statusDataRaw === 'object') ? statusDataRaw : lastStatusData || {};
+        // Palette de couleurs pour les statuts connus
+        const statusColors = {
+            'fermee': { color: '#21ba45', class: 'statut-fermee' },
+            'fermée': { color: '#21ba45', class: 'statut-fermee' },
+            'revue en cours': { color: '#2185d0', class: 'statut-revue' },
+            'en attente de client': { color: '#fbbd08', class: 'statut-attente-client' },
+            'en cours': { color: '#00b5ad', class: 'statut-en-cours' },
+            'en  cours': { color: '#00b5ad', class: 'statut-en-cours' },
+            'en attente': { color: '#6435c9', class: 'statut-en-attente' }
+        };
+        function normalize(str) {
+            return str.normalize('NFD').replace(/[\u0000-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
         }
+        // Filtrer et préparer les statuts à afficher (>0)
+        let statusArr = Object.entries(dataToDisplay)
+            .filter(([_, v]) => v > 0)
+            .map(([label, value]) => {
+                const norm = normalize(label);
+                const known = statusColors[norm] || {};
+                // Détermine la classe pour statuts inconnus
+                let badgeClass = known.class || 'statut-unknown';
+                let badgeColor = known.color || '#7ecfff';
+                return {
+                    label,
+                    value,
+                    color: badgeColor,
+                    class: badgeClass,
+                };
+            });
+        // Trie décroissant par nombre de tickets
+        statusArr = statusArr.sort((a, b) => b.value - a.value);
+        const total = statusArr.reduce((sum, s) => sum + s.value, 0);
+        let html = `<table class="status-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left">État</th>
+                    <th style="text-align:right">Nombre</th>
+                    <th style="text-align:left">Pourcentage</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        statusArr.forEach((s) => {
+            const percent = total ? (s.value / total * 100) : 0;
+            // Contraste badge selon thème
+            const isDark = document.documentElement.classList.contains('dark-mode') || document.body.classList.contains('dark-mode') || document.documentElement.getAttribute('data-theme') === 'dark';
+            let badgeBg = isDark ? '#232a36' : '#fff';
+            let badgeColor = isDark ? '#fff' : '#232a36';
+            if (normalize(s.label) === 'en attente de client') {
+                badgeBg = '#fff';
+                badgeColor = '#232a36';
+            }
+            if (s.class === 'statut-fermee') {
+                badgeBg = s.color;
+                badgeColor = '#fff';
+            }
+            html += `<tr>\n                <td><span class=\"statut-badge ${s.class}\" style=\"background:${badgeBg};color:${badgeColor};border-radius:4px;padding:2px 8px;font-weight:600;display:inline-block;border:1.5px solid ${s.color};min-width:120px;text-align:center;\">${s.label}</span></td>\n                <td style=\"text-align:right;\">${s.value}</td>\n                <td>\n                    <div style=\"display:flex;align-items:center;gap:8px;\">\n                        <div style=\"flex:1;min-width:80px;max-width:180px;height:8px;background:#232a36;border-radius:4px;overflow:hidden;\">\n                            <div style=\"height:100%;width:${percent}%;background:${s.color};transition:width 0.3s;\"></div>\n                        </div>\n                        <span style=\"font-size:0.98em;min-width:32px;text-align:right;\">${Math.round(percent)}%</span>\n                    </div>\n                </td>\n            </tr>`;
+        });
+        html += `<tr class=\"total-row\" style=\"font-weight:bold;border-top:1px solid #444950;\">\n            <td>Total</td>\n            <td style=\"text-align:right;\">${total}</td>\n            <td></td>\n        </tr>`;
+        html += '</tbody></table>';
+        barsDiv.innerHTML = html;
+
     }
     // --- Fonctions de mise à jour des blocs ---
     let lastCreatedVsResolved = null;
@@ -329,21 +354,17 @@ if (window.Chart && Chart.defaults) {
 function prepareTopData(rawData, topN = 5) {
     const entries = Object.entries(rawData).sort((a, b) => b[1] - a[1]);
     const top = entries.slice(0, topN);
-    const others = entries.slice(topN);
-    const otherCount = others.reduce((sum, [, v]) => sum + v, 0);
-    const otherDetails = others.map(([name, score]) => ({ name, score }));
-
+    const otherCount = entries.slice(topN).reduce((sum, [, v]) => sum + v, 0);
     if (otherCount > 0) {
-        top.push(['Autre', otherCount, otherDetails]);
+        top.push(['Autre', otherCount]);
     }
     const labels = top.map(([k]) => k);
     const data = top.map(([, v]) => v);
-    const details = top.map(([, , d]) => d || null); // Ajoute les détails ou null si non applicable
-    return { labels, data, details };
+    return { labels, data };
 }
 
 function renderDoughnutChart(ctx, rawData) {
-    const { labels, data, details } = prepareTopData(rawData);
+    const { labels, data } = prepareTopData(rawData);
     const backgroundColor = labels.map((_, i) => chartColors[i % chartColors.length]);
 
     const chartEl = (typeof ctx === 'string') ? document.getElementById(ctx) : ctx;
@@ -389,23 +410,12 @@ function renderDoughnutChart(ctx, rawData) {
             backgroundColor: tooltipBackground,
             titleColor: tooltipTextColor,
             bodyColor: tooltipTextColor,
-            displayColors: false, // Masque les petits carrés de couleur
             callbacks: {
                 label(tooltipItem) {
-                const label = tooltipItem.label;
                 const val = tooltipItem.parsed;
                 const total = tooltipItem.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
-
-                if (label === 'Autre' && details[tooltipItem.dataIndex]) {
-                    let detailLines = [`${label}: ${val} (${percentage}%)`];
-                    details[tooltipItem.dataIndex].forEach(d => {
-                        const detailPercentage = total ? ((d.score / total) * 100).toFixed(1) : 0;
-                        detailLines.push(`  - ${d.name}: ${d.score} (${detailPercentage}%)`);
-                    });
-                    return detailLines;
-                }
-                return `${label}: ${val} (${percentage}%)`;
+                return `${tooltipItem.label}: ${val} (${percentage}%)`;
                 }
             }
             }

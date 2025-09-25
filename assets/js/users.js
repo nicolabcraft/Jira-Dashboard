@@ -2,7 +2,7 @@
 // Gestion utilisateurs via API backend (CRUD)
 
 document.addEventListener('DOMContentLoaded', function() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const content = document.getElementById('admin-users-content');
   const formContainer = document.getElementById('user-form-container');
   const form = document.getElementById('user-form');

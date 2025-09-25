@@ -60,13 +60,13 @@ window.addEventListener("resize", () => {
 // Thème clair/sombre
 const storageKey = 'theme-preference';
 const getColorPreference = () => {
-  if (localStorage.getItem(storageKey))
-    return localStorage.getItem(storageKey);
+  if (sessionStorage.getItem(storageKey))
+    return sessionStorage.getItem(storageKey);
   else
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 const setPreference = () => {
-  localStorage.setItem(storageKey, theme.value);
+  sessionStorage.setItem(storageKey, theme.value);
   reflectPreference();
 };
 const reflectPreference = () => {
@@ -96,9 +96,9 @@ document.querySelectorAll('.nav-link .material-symbols-rounded').forEach(icon =>
   if (icon.textContent.trim() === 'logout') {
     icon.closest('.nav-link').addEventListener('click', function(e) {
       e.preventDefault();
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('username');
-      localStorage.removeItem('user');
+  sessionStorage.removeItem('isLoggedIn');
+  sessionStorage.removeItem('username');
+  sessionStorage.removeItem('user');
       // Redirige vers la page de login (ou index.html si pas de page login)
       window.location.href = '../index.html';
     });
@@ -107,7 +107,7 @@ document.querySelectorAll('.nav-link .material-symbols-rounded').forEach(icon =>
 // --- GARDER L'ÉTAT DE LA SIDEBAR ENTRE LES PAGES ---
 const sidebarStateKey = 'sidebar-collapsed';
 // Appliquer l'état sauvegardé au chargement
-if (localStorage.getItem(sidebarStateKey) === 'true') {
+if (sessionStorage.getItem(sidebarStateKey) === 'true') {
   sidebar.classList.add('collapsed');
   // Forcer l'affichage des icônes si la sidebar est fermée
   document.querySelectorAll('.nav-link .nav-icon').forEach(icon => {
@@ -117,5 +117,5 @@ if (localStorage.getItem(sidebarStateKey) === 'true') {
 // Sauvegarder l'état à chaque toggle
 sidebarToggler.addEventListener('click', () => {
   const isCollapsed = sidebar.classList.contains('collapsed');
-  localStorage.setItem(sidebarStateKey, isCollapsed);
+  sessionStorage.setItem(sidebarStateKey, isCollapsed);
 });

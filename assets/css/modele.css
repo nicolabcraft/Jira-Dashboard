@@ -42,7 +42,10 @@ body {
   border-left: 4px solid transparent;
   transition: background 0.2s, color 0.2s, border 0.2s;
 }
-
+.sidebar nav a.active, .sidebar nav a:hover {
+  color: #7ecfff;
+  border-left: 4px solid #7ecfff;
+}
 .sidebar .bottom {
   margin-top: auto;
   padding-bottom: 32px;
@@ -164,9 +167,7 @@ button:active {
 
 /* Styles pour les graphiques qui doivent prendre toute la hauteur */
 .card-full-height {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    height: auto;  /* container auto height, chart height via canvas */
 }
 
 .card-full-height canvas {
@@ -427,34 +428,6 @@ nav a[data-icon]::before {
   font-size: 1em;
   cursor: pointer;
   transition: border-color 0.2s;
-body.dark-mode .modal-content {
-    background-color: #2b3040;
-    color: #e0e6f1;
-    border-color: #4c566a;
-}
-
-body.dark-mode .modal-content h3,
-body.dark-mode .modal-content p,
-body.dark-mode .modal-content li,
-body.dark-mode .modal-content label,
-body.dark-mode .modal-content strong {
-    color: #e0e6f1;
-}
-
-body.dark-mode .modal-content input[type="text"] {
-    background-color: #1e2430;
-    color: #e0e6f1;
-    border: 1px solid #4c566a;
-}
-
-body.dark-mode .close-button {
-    color: #aaa;
-}
-
-body.dark-mode .close-button:hover,
-body.dark-mode .close-button:focus {
-    color: #fff;
-}
 }
 .selectors select:hover {
   border-color: #7ecfff;
@@ -524,6 +497,124 @@ body.dark-mode .close-button {
 body.dark-mode .close-button:hover,
 body.dark-mode .close-button:focus {
     color: #fff;
+}
+
+/* Badges statuts dashboard - contraste amélioré */
+.statut-badge {
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 8px;
+  display: inline-block;
+  min-width: 120px;
+  text-align: center;
+  border: 1.5px solid #7ecfff;
+  font-size: 1em;
+  letter-spacing: 0.01em;
+}
+.statut-badge.statut-fermee {
+  background: #21ba45 !important;
+  color: #fff !important;
+  border-color: #21ba45 !important;
+}
+.statut-badge.statut-revue {
+  background: #2185d0 !important;
+  color: #fff !important;
+  border-color: #2185d0 !important;
+}
+.statut-badge.statut-attente-client {
+  background: #fff !important;
+  color: #232a36 !important;
+  border-color: #fbbd08 !important;
+}
+.statut-badge.statut-en-cours {
+  background: #00b5ad !important;
+  color: #fff !important;
+  border-color: #00b5ad !important;
+}
+.statut-badge.statut-en-attente {
+  background: #6435c9 !important;
+  color: #fff !important;
+  border-color: #6435c9 !important;
+}
+.statut-badge.statut-unknown {
+  background: #7ecfff !important;
+  color: #232a36 !important;
+  border-color: #7ecfff !important;
+}
+body.dark-mode .statut-badge {
+  background: #232a36 !important;
+  color: #fff !important;
+  border-color: #7ecfff !important;
+}
+body.dark-mode .statut-badge.statut-attente-client {
+  background: #fff !important;
+  color: #232a36 !important;
+  border-color: #fbbd08 !important;
+}
+body.dark-mode .statut-badge.statut-fermee {
+  background: #21ba45 !important;
+  color: #fff !important;
+  border-color: #21ba45 !important;
+}
+body.dark-mode .statut-badge.statut-revue {
+  background: #2185d0 !important;
+  color: #fff !important;
+  border-color: #2185d0 !important;
+}
+body.dark-mode .statut-badge.statut-en-cours {
+  background: #00b5ad !important;
+  color: #fff !important;
+  border-color: #00b5ad !important;
+}
+body.dark-mode .statut-badge.statut-en-attente {
+  background: #6435c9 !important;
+  color: #fff !important;
+  border-color: #6435c9 !important;
+}
+body.dark-mode .statut-badge.statut-unknown {
+  background: #7ecfff !important;
+  color: #232a36 !important;
+  border-color: #7ecfff !important;
+}
+.status-table th, .status-table td {
+  padding: 8px 6px;
+  font-size: 1em;
+}
+.status-table th {
+  color: var(--status-th-color, #232a36);
+  font-weight: 700;
+  border-bottom: 1px solid #232a36;
+  background: transparent;
+}
+.status-table td {
+  color: #232a36;
+  background: transparent;
+}
+.status-table tr {
+  border-bottom: 1px solid #232a36;
+}
+.status-table tr:last-child {
+  border-bottom: none;
+}
+.status-table tr.total-row td {
+  font-weight: bold;
+  color: #232a36;
+}
+body.dark-mode .status-table th {
+  --status-th-color: #e0e6f1;
+  color: var(--status-th-color, #e0e6f1) !important;
+  background: transparent !important;
+}
+body.dark-mode .status-table td {
+  color: #e0e6f1 !important;
+}
+body.dark-mode .status-table tr.total-row td {
+  color: #fff !important;
+  font-weight: bold;
+}
+.status-table td[style*='text-align:right;'] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 @media (max-width: 1100px) {
@@ -839,6 +930,72 @@ body.dark-mode .close-button:focus {
     font-weight: 600;
 }
 
+/* Denied Access */
+.access-denied {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  color: white;
+  font-size: 24px;
+  text-align: center;
+  flex-direction: column;
+  gap: 20px;
+}
+.access-denied .icon {
+  font-size: 48px;
+  color: #ff7e7e;
+}
+
+.btn-restart:hover {
+  background: #ff6b6b !important;
+}
+.btn-restart:active {
+  transform: scale(0.98);
+}
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 20px;
+}
+.team-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.team-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.team-score {
+  font-size: 0.95em;
+}
+.team-score span {
+  color: #b0b8c9;
+}
+.progress-container {
+  height: 14px;
+  width: 100%;
+  background: #e8eef6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.progress {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #7ecfff 0%, #b47eff 100%);
+  transition: width 0.3s ease-in-out;
+}
+
 /* Styles for particles background */
 #tsparticles {
   position: fixed;
@@ -849,3 +1006,4 @@ body.dark-mode .close-button:focus {
   z-index: 0;
   background-color: #0f121d;
 }
+

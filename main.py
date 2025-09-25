@@ -88,6 +88,8 @@ app.config['SESSION_MONGODB_DB'] = SESSION_DB
 app.config['SESSION_MONGODB_COLLECT'] = SESSION_COLLECTION
 app.config['SESSION_PERMANENT'] = False
 app.secret_key = os.getenv('SECRET_KEY', 'changeme')
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Pour compatibilité OAuth
+app.config['SESSION_COOKIE_SECURE'] = False    # True en prod HTTPS uniquement
 Session(app)
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
@@ -97,6 +99,11 @@ GOOGLE_DISCOVERY_URL = (
 REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:80/api/login/google/callback')
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
+ # --- Google OAuth utility: fetch provider config ---
+def get_google_provider_cfg():
+    import requests
+    return requests.get(GOOGLE_DISCOVERY_URL).json()
+
 # --- Fonctions utilitaires minimales pour éviter les erreurs ---
 def fetch_jira_issues(jql, fields=None, max_results=100):
     """
@@ -104,31 +111,36 @@ def fetch_jira_issues(jql, fields=None, max_results=100):
     fields: string séparé par virgule ou None (tous les champs)
     Retourne une liste de tickets (dicts)
     """
-    url = JIRA_URL.rstrip('/') + '/rest/api/3/search'
+    url = JIRA_URL.rstrip('/') + '/rest/api/3/search/jql'
     auth = (JIRA_USERNAME, JIRA_TOKEN)
     headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     }
-    params = {
+    body = {
         'jql': jql,
-        'maxResults': max_results,
-        'startAt': 0
+        'maxResults': max_results
     }
     if fields:
-        params['fields'] = fields
+        # La nouvelle API attend une liste de champs
+        body['fields'] = [f.strip() for f in fields.split(',')]
     all_issues = []
+    next_page_token = None
     while True:
-        resp = requests.get(url, headers=headers, params=params, auth=auth)
+        if next_page_token:
+            body['nextPageToken'] = next_page_token
+        resp = requests.post(url, headers=headers, json=body, auth=auth)
         if resp.status_code != 200:
             logging.error(f"[Jira] Erreur {resp.status_code}: {resp.text}")
             break
         data = resp.json()
         issues = data.get('issues', [])
         all_issues.extend(issues)
-        if len(issues) < max_results:
+        if data.get('isLast', True):
             break
-        params['startAt'] += max_results
+        next_page_token = data.get('nextPageToken')
+        if not next_page_token:
+            break
     return all_issues
 
 def get_resolved_tickets(projectKey=None):
@@ -487,6 +499,8 @@ def backup_admin_dashboard_stats():
     finally:
         if backup_mongo_client:
             backup_mongo_client.close()
+
+# --- UTILITAIRES POUR LA GESTION DES UTILISATEURS ---
 def user_to_dict(user):
     return {
         "id": str(user.get("_id")),
@@ -571,6 +585,30 @@ def api_kpis():
             return jsonify({'error': 'Stats non trouvées'}), 404
     stats.pop('_id', None)
     return jsonify(stats)
+
+# --- Google SSO login route (start OAuth2 flow) ---
+@app.route('/api/login/google')
+def login_google():
+    provider_cfg = get_google_provider_cfg()
+    authorization_endpoint = provider_cfg["authorization_endpoint"]
+    # Ajoute le scope Drive ici
+    oauth = OAuth2Session(
+        GOOGLE_CLIENT_ID,
+        redirect_uri=REDIRECT_URI,
+        scope=[
+            "openid",
+            "email",
+            "profile",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+    authorization_url, state = oauth.authorization_url(
+        authorization_endpoint,
+        access_type="offline",
+        prompt="consent"
+    )
+    session['oauth_state'] = state
+    return redirect(authorization_url)
 
 @app.route('/api/stats')
 @login_required
@@ -919,60 +957,52 @@ def api_visualise_data():
 @app.route('/api/export/drive', methods=['POST'])
 @login_required
 def export_to_drive():
-   if 'file' not in request.files:
-       return jsonify({'error': 'Aucun fichier fourni'}), 400
-   
-   folder_id = request.form.get('folderId')
-   file_name = request.form.get('fileName')
-   
-   if not folder_id or not file_name:
-       return jsonify({'error': 'ID du dossier et nom du fichier requis'}), 400
-
-   file_storage = request.files['file']
-   
-   # Lire le contenu du fichier en mémoire
-   file_content = file_storage.read()
-   
-   credentials_path = os.getenv('GOOGLE_API_CREDENTIALS_PATH')
-   if not credentials_path or not os.path.exists(credentials_path):
-       logging.error(f"Erreur: Le fichier de credentials '{credentials_path}' est introuvable.")
-       return jsonify({'error': 'Configuration du serveur Google Drive incomplète.'}), 500
-
-   try:
-       creds = service_account.Credentials.from_service_account_file(
-           credentials_path,
-           scopes=['https://www.googleapis.com/auth/drive']
-       )
-       service = build('drive', 'v3', credentials=creds)
-       
-       file_metadata = {
-           'name': file_name,
-           'parents': [folder_id]
-       }
-       
-       media = MediaIoBaseUpload(
-           io.BytesIO(file_content),
-           mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-           resumable=True
-       )
-       
-       file = service.files().create(
-           body=file_metadata,
-           media_body=media,
-           fields='id, webViewLink'
-       ).execute()
-       
-       logging.info(f"Fichier uploadé avec succès. ID: {file.get('id')}")
-       
-       return jsonify({
-           'success': True,
-           'file_id': file.get('id'),
-           'file_url': file.get('webViewLink')
-       })
-
-   except Exception as e:
-       logging.error(f"Erreur lors de l'export vers Google Drive: {e}")
-       return jsonify({'error': f'Une erreur est survenue: {e}'}), 500
+    if 'file' not in request.files:
+        return jsonify({'error': 'Aucun fichier fourni'}), 400
+    folder_id = request.form.get('folderId')
+    file_name = request.form.get('fileName')
+    if not folder_id or not file_name:
+        return jsonify({'error': 'ID du dossier et nom du fichier requis'}), 400
+    file_storage = request.files['file']
+    file_content = file_storage.read()
+    # Utilise le token Google OAuth de l'utilisateur connecté
+    google_token = session.get('google_token')
+    if not google_token:
+        return jsonify({'error': 'Utilisateur non authentifié Google'}), 401
+    try:
+        from google.oauth2.credentials import Credentials
+        creds = Credentials(
+            token=google_token['access_token'],
+            refresh_token=google_token.get('refresh_token'),
+            token_uri='https://oauth2.googleapis.com/token',
+            client_id=os.getenv('GOOGLE_CLIENT_ID'),
+            client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+            scopes=['https://www.googleapis.com/auth/drive']
+        )
+        service = build('drive', 'v3', credentials=creds)
+        file_metadata = {
+            'name': file_name,
+            'parents': [folder_id]
+        }
+        media = MediaIoBaseUpload(
+            io.BytesIO(file_content),
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            resumable=True
+        )
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink'
+        ).execute()
+        logging.info(f"Fichier uploadé avec succès. ID: {file.get('id')}")
+        return jsonify({
+            'success': True,
+            'file_id': file.get('id'),
+            'file_url': file.get('webViewLink')
+        })
+    except Exception as e:
+        logging.error(f"Erreur lors de l'export vers Google Drive: {e}")
+        return jsonify({'error': f'Une erreur est survenue: {e}'}), 500
 
 @app.route('/api/stats/relance/current')
 def api_stats_relance_current():
@@ -1078,6 +1108,43 @@ def login():
     # Message neutre pour éviter l'énumération
     return jsonify({'success': False, 'error': 'Identifiants invalides'}), 401
 
+@app.route('/api/login/google/callback')
+def google_callback():
+    provider_cfg = get_google_provider_cfg()
+    oauth = OAuth2Session(GOOGLE_CLIENT_ID, redirect_uri=REDIRECT_URI, state=session.get('oauth_state'))
+    try:
+        token = oauth.fetch_token(
+            provider_cfg["token_endpoint"],
+            client_secret=GOOGLE_CLIENT_SECRET,
+            authorization_response=request.url
+        )
+        userinfo_endpoint = provider_cfg["userinfo_endpoint"]
+        resp = oauth.get(userinfo_endpoint)
+        userinfo = resp.json()
+        email = userinfo.get("email")
+        if not email:
+            return jsonify({"error": "Impossible de récupérer l'email Google."}), 400
+        # Recherche l'utilisateur par email
+        user = users_collection.find_one({"email": email})
+        if not user:
+            # Crée un nouvel utilisateur si besoin
+            user = {
+                "email": email,
+                "name": userinfo.get("name", ""),
+                "prenom": userinfo.get("given_name", ""),
+                "username": email,
+                "type_connexion": "SSO-Google",
+                "role": "user"
+            }
+            users_collection.insert_one(user)
+        session['user'] = email
+        session['isLoggedIn'] = "true"
+        session['google_token'] = token  # Stocke le token Google OAuth dans la session
+        import sys
+        return redirect("/pages/dashboard.html")
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de la connexion Google: {e}"}), 500
+
 @app.route('/api/logout')
 def logout():
     session.pop('user', None)
@@ -1096,98 +1163,8 @@ def get_current_user():
         ]
     })
     if not user:
-        # Si aucun user trouvé, retourne au moins le username pour compatibilité
         logging.warning('[API /api/user] Aucun utilisateur trouvé, retour minimal')
         return jsonify({'username': session['user']})
-    return jsonify(user_to_dict(user))
-
-# --- Google SSO ---
-def get_google_provider_cfg():
-    return requests.get(GOOGLE_DISCOVERY_URL).json()
-
-@app.route('/api/login/google')
-def google_login():
-    google_provider_cfg = get_google_provider_cfg()
-    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
-    oauth = OAuth2Session(GOOGLE_CLIENT_ID, redirect_uri=REDIRECT_URI, scope=["openid", "email", "profile"])
-    authorization_url, state = oauth.authorization_url(authorization_endpoint, access_type="offline", prompt="consent")
-    session['oauth_state'] = state
-    return redirect(authorization_url)
-
-@app.route('/api/login/google/callback')
-def google_callback():
-    oauth = OAuth2Session(GOOGLE_CLIENT_ID, redirect_uri=REDIRECT_URI, state=session.get('oauth_state'))
-    google_provider_cfg = get_google_provider_cfg()
-    token_endpoint = google_provider_cfg["token_endpoint"]
-    token = oauth.fetch_token(
-        token_endpoint,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        authorization_response=request.url
-    )
-    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
-    resp = oauth.get(userinfo_endpoint)
-    userinfo = resp.json()
-    session['user'] = userinfo['email']
-    # Optionally, create user in users db if not exists
-    if not users_collection.find_one({'username': userinfo['email']}):
-        users_collection.insert_one({'username': userinfo['email'], 'google': True})
-    return redirect('/pages/dashboard.html')
-
-# --- ROUTE POUR SERVIR LA PAGE D'ACCUEIL ---
-@app.route('/')
-def serve_index():
-    return app.send_static_file('index.html')
-
-@app.route('/api/users', methods=['GET'])
-@login_required
-def get_users():
-    users = list(users_collection.find())
-    return jsonify([user_to_dict(u) for u in users])
-
-@app.route('/api/users', methods=['POST'])
-@admin_required
-def add_user():
-    data = request.json
-    required_fields = ["name", "email", "username", "password", "role"]
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({"error": f"Champ '{field}' requis"}), 400
-    # Hash du mot de passe
-    hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    user = {
-        "name": data["name"],
-        "prenom": data.get("prenom", ""),
-        "email": data["email"],
-        "username": data["username"],
-        "password": hashed,
-        "type_connexion": data.get("type_connexion", ""),
-        "role": data["role"]
-    }
-    result = users_collection.insert_one(user)
-    user["_id"] = result.inserted_id
-    return jsonify(user_to_dict(user)), 201
-
-@app.route('/api/users/<user_id>', methods=['PUT'])
-@login_required
-def update_user(user_id):
-    data = request.json
-    update = {}
-    for field in ["name", "prenom", "email", "username", "type_connexion", "role"]:
-        if field in data and data[field] != "":
-            update[field] = data[field]
-    # Password: only update if provided and not empty
-    if "password" in data and data["password"]:
-        hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        update["password"] = hashed
-    if not update:
-        return jsonify({"error": "Aucune donnée à mettre à jour"}), 400
-    try:
-        # Vérification stricte de l'ObjectId
-        oid = ObjectId(user_id)
-        users_collection.update_one({"_id": oid}, {"$set": update})
-        user = users_collection.find_one({"_id": oid})
-    except Exception:
-        return jsonify({"error": "ID utilisateur invalide"}), 400
     return jsonify(user_to_dict(user))
 
 @app.route('/api/users/<user_id>', methods=['DELETE'])
