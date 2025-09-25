@@ -1167,6 +1167,58 @@ def get_current_user():
         return jsonify({'username': session['user']})
     return jsonify(user_to_dict(user))
 
+@app.route('/api/users', methods=['GET'])
+@login_required
+def get_users():
+    users = list(users_collection.find())
+    return jsonify([user_to_dict(u) for u in users])
+
+@app.route('/api/users', methods=['POST'])
+@admin_required
+def add_user():
+    data = request.json
+    required_fields = ["name", "email", "username", "password", "role"]
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({"error": f"Champ '{field}' requis"}), 400
+    # Hash du mot de passe
+    hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    user = {
+        "name": data["name"],
+        "prenom": data.get("prenom", ""),
+        "email": data["email"],
+        "username": data["username"],
+        "password": hashed,
+        "type_connexion": data.get("type_connexion", ""),
+        "role": data["role"]
+    }
+    result = users_collection.insert_one(user)
+    user["_id"] = result.inserted_id
+    return jsonify(user_to_dict(user)), 201
+
+@app.route('/api/users/<user_id>', methods=['PUT'])
+@login_required
+def update_user(user_id):
+    data = request.json
+    update = {}
+    for field in ["name", "prenom", "email", "username", "type_connexion", "role"]:
+        if field in data and data[field] != "":
+            update[field] = data[field]
+    # Password: only update if provided and not empty
+    if "password" in data and data["password"]:
+        hashed = bcrypt.hashpw(data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        update["password"] = hashed
+    if not update:
+        return jsonify({"error": "Aucune donnée à mettre à jour"}), 400
+    try:
+        # Vérification stricte de l'ObjectId
+        oid = ObjectId(user_id)
+        users_collection.update_one({"_id": oid}, {"$set": update})
+        user = users_collection.find_one({"_id": oid})
+    except Exception:
+        return jsonify({"error": "ID utilisateur invalide"}), 400
+    return jsonify(user_to_dict(user))
+
 @app.route('/api/users/<user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
@@ -1245,6 +1297,7 @@ def index():
 if __name__ == '__main__':
     load_dotenv()
     PORT = int(os.getenv("PORT", 80))
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' 
     # --- DÉBUT DE L'APPLICATION ---
     print(f"[Serveur] Démarrage du serveur de production sur http://0.0.0.0:{PORT}")
     # Lancement du worker dans un thread séparé
