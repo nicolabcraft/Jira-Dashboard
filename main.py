@@ -1238,6 +1238,10 @@ def restart_server_options():
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
+@app.route('/')
+def index():
+    return app.send_static_file('index.html')
+
 if __name__ == '__main__':
     load_dotenv()
     PORT = int(os.getenv("PORT", 80))
