@@ -37,12 +37,12 @@ def get_business_hours_between_dates(start_date, end_date):
         end = datetime.strptime(end_date, '%Y-%m-%dT%H:%M:%S.%f%z')
         
         # Configuration des heures ouvrées (en heures)
-        BUSINESS_START_HOUR = 9
+        BUSINESS_START_HOUR = 8
         BUSINESS_END_HOUR = 17
         LUNCH_START_HOUR = 12
-        LUNCH_END_HOUR = 13
-        BUSINESS_HOURS_PER_DAY = 7  # 9h-12h (3h) + 13h-17h (4h) = 7h
-        
+        LUNCH_END_HOUR = 14
+        BUSINESS_HOURS_PER_DAY = 7  # 8h-12h (4h) + 14h-17h (3h) = 7h
+
         if start >= end:
             return 0
         
