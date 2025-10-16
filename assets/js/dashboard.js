@@ -175,15 +175,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Palette de couleurs pour les statuts connus
         const statusColors = {
             'fermee': { color: '#21ba45', class: 'statut-fermee' },
-            'fermée': { color: '#21ba45', class: 'statut-fermee' },
             'revue en cours': { color: '#2185d0', class: 'statut-revue' },
             'en attente de client': { color: '#fbbd08', class: 'statut-attente-client' },
             'en cours': { color: '#00b5ad', class: 'statut-en-cours' },
-            'en  cours': { color: '#00b5ad', class: 'statut-en-cours' },
             'en attente': { color: '#6435c9', class: 'statut-en-attente' }
         };
         function normalize(str) {
-            return str.normalize('NFD').replace(/[\u0000-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+            // Simplifie la normalisation pour matcher les labels réels
+            return str
+                .toLowerCase()
+                .replace(/é/g, 'e')
+                .replace(/è/g, 'e')
+                .replace(/ê/g, 'e')
+                .replace(/à/g, 'a')
+                .replace(/ç/g, 'c')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
         // Filtrer et préparer les statuts à afficher (>0)
         let statusArr = Object.entries(dataToDisplay)
@@ -204,12 +211,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Trie décroissant par nombre de tickets
         statusArr = statusArr.sort((a, b) => b.value - a.value);
         const total = statusArr.reduce((sum, s) => sum + s.value, 0);
+        
+        // Détection du mode sombre pour les couleurs d'en-têtes
+        const isDark = document.documentElement.classList.contains('dark-mode') || 
+                       document.body.classList.contains('dark-mode') || 
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+        const headerColor = isDark ? '#e0e6f1' : '#232a36';
+        
         let html = `<table class="status-table" style="width:100%;border-collapse:collapse;">
             <thead>
                 <tr>
-                    <th style="text-align:left">État</th>
-                    <th style="text-align:right">Nombre</th>
-                    <th style="text-align:left">Pourcentage</th>
+                    <th style="text-align:left;color:${headerColor}">État</th>
+                    <th style="text-align:right;color:${headerColor}">Nombre</th>
+                    <th style="text-align:left;color:${headerColor}">Pourcentage</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -227,9 +241,24 @@ document.addEventListener('DOMContentLoaded', async function() {
                 badgeBg = s.color;
                 badgeColor = '#fff';
             }
-            html += `<tr>\n                <td><span class=\"statut-badge ${s.class}\" style=\"background:${badgeBg};color:${badgeColor};border-radius:4px;padding:2px 8px;font-weight:600;display:inline-block;border:1.5px solid ${s.color};min-width:120px;text-align:center;\">${s.label}</span></td>\n                <td style=\"text-align:right;\">${s.value}</td>\n                <td>\n                    <div style=\"display:flex;align-items:center;gap:8px;\">\n                        <div style=\"flex:1;min-width:80px;max-width:180px;height:8px;background:#232a36;border-radius:4px;overflow:hidden;\">\n                            <div style=\"height:100%;width:${percent}%;background:${s.color};transition:width 0.3s;\"></div>\n                        </div>\n                        <span style=\"font-size:0.98em;min-width:32px;text-align:right;\">${Math.round(percent)}%</span>\n                    </div>\n                </td>\n            </tr>`;
+            html += `<tr>
+              <td>
+                <span class="statut-badge ${s.class}" style="border-radius:4px;padding:2px 8px;font-weight:600;display:inline-block;border:1.5px solid ${s.color};min-width:120px;text-align:center;">
+                  ${s.label}
+                </span>
+              </td>
+              <td style="text-align:right;color:${headerColor};">${s.value}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="flex:1;min-width:80px;max-width:180px;height:8px;background:#232a36;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;width:${percent}%;background:${s.color};transition:width 0.3s;"></div>
+                  </div>
+                  <span style="font-size:0.98em;min-width:32px;text-align:right;color:${headerColor};">${Math.round(percent)}%</span>
+                </div>
+              </td>
+            </tr>`;
         });
-        html += `<tr class=\"total-row\" style=\"font-weight:bold;border-top:1px solid #444950;\">\n            <td>Total</td>\n            <td style=\"text-align:right;\">${total}</td>\n            <td></td>\n        </tr>`;
+        html += `<tr class=\"total-row\" style=\"font-weight:bold;border-top:1px solid #444950;\">\n            <td style=\"color:${headerColor};\">Total</td>\n            <td style=\"text-align:right;color:${headerColor};\">${total}</td>\n            <td></td>\n        </tr>`;
         html += '</tbody></table>';
         barsDiv.innerHTML = html;
 

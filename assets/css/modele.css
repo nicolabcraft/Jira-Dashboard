@@ -484,6 +484,28 @@ body.dark-mode .modal-content strong {
     color: #e0e6f1;
 }
 
+/* Correction héritage couleur texte dans card en dark mode */
+body.dark-mode .card,
+body.dark-mode .card * {
+    color: #e0e6f1 !important;
+}
+
+/* Override spécifique pour les tableaux de statut en mode sombre - doit être après la règle générale */
+body.dark-mode .status-table th {
+  --status-th-color: #e0e6f1;
+  color: var(--status-th-color, #e0e6f1) !important;
+  background: transparent !important;
+}
+body.dark-mode .status-table td {
+  --status-td-color: #e0e6f1;
+  color: var(--status-td-color, #e0e6f1) !important;
+  background: transparent !important;
+}
+body.dark-mode .status-table tr.total-row td {
+  color: #fff !important;
+  font-weight: bold;
+}
+
 body.dark-mode .modal-content input[type="text"] {
     background-color: #1e2430;
     color: #e0e6f1;
@@ -542,10 +564,18 @@ body.dark-mode .close-button:focus {
   border-color: #7ecfff !important;
 }
 body.dark-mode .statut-badge {
-  background: #232a36 !important;
-  color: #fff !important;
-  border-color: #7ecfff !important;
+    background: #232a36 !important;
+    color: #fff !important;
+    border-color: #7ecfff !important;
 }
+body.dark-mode .statut-badge.statut-fermee,
+body.dark-mode .statut-badge.statut-revue,
+body.dark-mode .statut-badge.statut-en-cours,
+body.dark-mode .statut-badge.statut-en-attente,
+body.dark-mode .statut-badge.statut-attente-client {
+    color: #fff !important;
+}
+
 body.dark-mode .statut-badge.statut-attente-client {
   background: #fff !important;
   color: #232a36 !important;
@@ -572,9 +602,9 @@ body.dark-mode .statut-badge.statut-en-attente {
   border-color: #6435c9 !important;
 }
 body.dark-mode .statut-badge.statut-unknown {
-  background: #7ecfff !important;
-  color: #232a36 !important;
-  border-color: #7ecfff !important;
+    background: #7ecfff !important;
+    color: #fff !important;
+    border-color: #7ecfff !important;
 }
 .status-table th, .status-table td {
   padding: 8px 6px;
@@ -599,18 +629,6 @@ body.dark-mode .statut-badge.statut-unknown {
 .status-table tr.total-row td {
   font-weight: bold;
   color: #232a36;
-}
-body.dark-mode .status-table th {
-  --status-th-color: #e0e6f1;
-  color: var(--status-th-color, #e0e6f1) !important;
-  background: transparent !important;
-}
-body.dark-mode .status-table td {
-  color: #e0e6f1 !important;
-}
-body.dark-mode .status-table tr.total-row td {
-  color: #fff !important;
-  font-weight: bold;
 }
 .status-table td[style*='text-align:right;'] {
   font-variant-numeric: tabular-nums;

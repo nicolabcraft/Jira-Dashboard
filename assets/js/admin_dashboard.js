@@ -50,7 +50,12 @@ async function getLast30DaysData() {
         if (!statsResponse.ok) throw new Error('Erreur lors de la récupération des stats');
         const statsData = await statsResponse.json();
 
-        // Récupérer les tickets résolus des 30 derniers jours pour le SLA et resolved-by-assignee
+        // Récupérer les données SLA avec heures ouvrées
+        const slaResponse = await fetch('/api/SLA', fetchOptions);
+        if (!slaResponse.ok) throw new Error('Erreur lors de la récupération des données SLA');
+        const slaData = await slaResponse.json();
+
+        // Récupérer les tickets résolus des 30 derniers jours pour resolved-by-assignee
         const recentTicketsResponse = await fetch('/api/tickets/recent', fetchOptions);
         if (!recentTicketsResponse.ok) throw new Error('Erreur lors de la récupération des tickets récents');
         const recentTickets = await recentTicketsResponse.json();
@@ -59,42 +64,6 @@ async function getLast30DaysData() {
         const allTicketsResponse = await fetch('/api/tickets/all', fetchOptions);
         if (!allTicketsResponse.ok) throw new Error('Erreur lors de la récupération de tous les tickets');
         const allTickets = await allTicketsResponse.json();
-
-        // Calculer le SLA réel à partir des tickets résolus
-        let totalResolutionTime = 0;
-        let resolvedCount = 0;
-        let previousTotalTime = 0;
-        let previousCount = 0;
-
-        // Trier les tickets récents par date de mise à jour pour le SLA
-        const sortedRecentTickets = recentTickets
-            .filter(ticket => ticket.status === 'Done' || ticket.status === 'Fermée')
-            .filter(ticket => {
-                if (ticket.labels && Array.isArray(ticket.labels)) {
-                    return !ticket.labels.includes('RelanceClose');
-                } else {
-                    return true; // Inclure les tickets sans étiquettes ou avec labels non définis
-                }
-            })
-            .sort((a, b) => new Date(b.updated) - new Date(a.updated));
-
-        // Calculer le SLA actuel (30 derniers tickets résolus)
-        sortedRecentTickets.slice(0, 30).forEach(ticket => {
-            const resolutionTime = getMinutesBetweenDates(ticket.created, ticket.updated);
-            totalResolutionTime += resolutionTime;
-            resolvedCount++;
-        });
-
-        // Calculer le SLA précédent (30 tickets résolus suivants)
-        sortedRecentTickets.slice(30, 60).forEach(ticket => {
-            const resolutionTime = getMinutesBetweenDates(ticket.created, ticket.updated);
-            previousTotalTime += resolutionTime;
-            previousCount++;
-        });
-
-        const avgResolutionTime = resolvedCount > 0 ? Math.round(totalResolutionTime / resolvedCount) : 0;
-        const previousAvgTime = previousCount > 0 ? Math.round(previousTotalTime / previousCount) : 0;
-        const slaTrend = previousAvgTime > 0 ? ((previousAvgTime - avgResolutionTime) / previousAvgTime) * 100 : 0;
 
         // Préparer les données des assignés (pour resolved-by-assignee, utiliser les tickets récents)
         const assignees = recentTickets.reduce((acc, ticket) => {
@@ -116,8 +85,8 @@ async function getLast30DaysData() {
             openTickets: kpisData.total_open_tickets || 0,
             resolvedTickets: kpisData.tickets_closed || 0,
             totalTickets: kpisData.total_tickets || 0,
-            averageResolutionTime: avgResolutionTime,
-            slaTrend: slaTrend,
+            averageResolutionTime: slaData.avg_resolution_time_business_hours || 0, // En heures ouvrées
+            slaAvailability: slaData.availability_percentage || 100, // Pourcentage de disponibilité SLA
             supportHealth: kpisData.support_health / 100 || 0,
             assignees: assigneesList,
             allTickets: allTickets // Stocker allTickets dans l'objet data
@@ -139,18 +108,23 @@ function updateKPIs(data) {
     const slaTrendElement = document.getElementById('sla-trend');
 
     if (data.averageResolutionTime > 0) {
-        slaElement.textContent = formatTime(data.averageResolutionTime);
+        // Afficher le temps en heures ouvrées
+        const hours = data.averageResolutionTime;
+        const openday = Math.floor(hours / 8);
+        slaElement.textContent = `${hours.toFixed(1)}h (${openday}j ouvrés)`;
     
-        const trend = data.slaTrend;
-        const isImprovement = trend > 0;
-        const trendIcon = isImprovement ? '../assets/img/up.svg' : '../assets/img/down.svg';
-        const trendText = isImprovement ? 'Plus rapide' : 'Plus lent';
-        const trendColor = isImprovement ? '#4CAF50' : '#f44336';
+        // Afficher le pourcentage de disponibilité SLA au lieu de la tendance
+        const availability = data.slaAvailability;
+        // Déterminer la classe CSS selon le niveau de disponibilité
+        const availabilityClass = availability >= 95 ? 'sla-excellent' :  // Bleu primaire (excellent)
+                                 availability >= 90 ? 'sla-good' :        // Vert (bon)
+                                 availability >= 80 ? 'sla-acceptable' :  // Orange (acceptable)
+                                 'sla-critical';                          // Rouge (critique)
         
         slaTrendElement.innerHTML = `
-            <div style="display:flex;align-items:center;gap:4px;color:${trendColor}">
-                <img src="${trendIcon}" alt="${trendText}" style="width:16px;height:16px;"/>
-                <span>${Math.abs(trend).toFixed(1)}% ${trendText}</span>
+            <div class="${availabilityClass}" style="display:flex;align-items:center;gap:4px;">
+                <span class="material-symbols-rounded" style="font-size:16px;">analytics</span>
+                <span>Disponibilité: ${availability.toFixed(1)}%</span>
             </div>
         `;
     } else {

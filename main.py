@@ -23,6 +23,72 @@ def get_minutes_between_dates(start_date, end_date):
     except (ValueError, TypeError) as e:
         print(f"Error parsing dates: {e}")
         return 0
+
+def get_business_hours_between_dates(start_date, end_date):
+    """
+    Calculate the time difference between two dates in minutes, excluding weekends and non-business hours.
+    Business hours: Monday to Friday, 7 hours per day (9h-12h + 13h-17h)
+    """
+    try:
+        import calendar
+        
+        # Parse dates with timezone support
+        start = datetime.strptime(start_date, '%Y-%m-%dT%H:%M:%S.%f%z')
+        end = datetime.strptime(end_date, '%Y-%m-%dT%H:%M:%S.%f%z')
+        
+        # Configuration des heures ouvrées (en heures)
+        BUSINESS_START_HOUR = 9
+        BUSINESS_END_HOUR = 17
+        LUNCH_START_HOUR = 12
+        LUNCH_END_HOUR = 13
+        BUSINESS_HOURS_PER_DAY = 7  # 9h-12h (3h) + 13h-17h (4h) = 7h
+        
+        if start >= end:
+            return 0
+        
+        total_business_minutes = 0
+        current = start.replace(hour=BUSINESS_START_HOUR, minute=0, second=0, microsecond=0)
+        
+        while current.date() <= end.date():
+            # Skip weekends
+            if current.weekday() >= 5:  # Saturday = 5, Sunday = 6
+                current += timedelta(days=1)
+                continue
+            
+            # Calculate business hours for this day
+            day_start = current.replace(hour=BUSINESS_START_HOUR, minute=0, second=0, microsecond=0)
+            morning_end = current.replace(hour=LUNCH_START_HOUR, minute=0, second=0, microsecond=0)
+            afternoon_start = current.replace(hour=LUNCH_END_HOUR, minute=0, second=0, microsecond=0)
+            day_end = current.replace(hour=BUSINESS_END_HOUR, minute=0, second=0, microsecond=0)
+            
+            # Determine the actual start time for this day
+            actual_start = max(start, day_start)
+            # Determine the actual end time for this day
+            actual_end = min(end, day_end)
+            
+            if actual_start < actual_end:
+                # Calculate morning hours (9h-12h)
+                morning_start = actual_start
+                morning_end_time = min(actual_end, morning_end)
+                if morning_start < morning_end_time:
+                    morning_minutes = (morning_end_time - morning_start).total_seconds() / 60
+                    total_business_minutes += morning_minutes
+                
+                # Calculate afternoon hours (13h-17h)
+                afternoon_start_time = max(actual_start, afternoon_start)
+                afternoon_end = actual_end
+                if afternoon_start_time < afternoon_end and afternoon_start_time >= afternoon_start:
+                    afternoon_minutes = (afternoon_end - afternoon_start_time).total_seconds() / 60
+                    total_business_minutes += afternoon_minutes
+            
+            current += timedelta(days=1)
+        
+        return round(total_business_minutes)
+        
+    except (ValueError, TypeError) as e:
+        print(f"Error parsing dates: {e}")
+        return 0
+
 from collections import Counter, defaultdict
 import threading
 import time
@@ -151,6 +217,62 @@ def get_resolved_tickets(projectKey=None):
     assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
     jql = f'project = {proj} AND assignee IN ({assignees_str}) AND status = Closed AND createdDate >= -30d'
     return fetch_jira_issues(jql, fields='assignee,resolutiondate,status')
+
+def calculate_sla_availability(tickets_data, sla_target_hours=48):
+    """
+    Calculate SLA availability percentage based on business hours.
+    SLA Target: 48 business hours (48h * 60min = 2880 minutes)
+    Formula: Disponibilité (%) = ((Temps total - Temps d'indisponibilité) / Temps total) × 100
+    """
+    if not tickets_data:
+        return {
+            'availability_percentage': 100,
+            'avg_resolution_time_business_hours': 0,
+            'sla_violations': 0,
+            'total_tickets': 0,
+            'sla_target_hours': sla_target_hours
+        }
+    
+    sla_target_minutes = sla_target_hours * 60
+    total_tickets = len(tickets_data)
+    sla_violations = 0
+    total_resolution_time = 0
+    
+    for ticket in tickets_data:
+        if ticket.get('status') in ['Done', 'Fermée', 'Closed']:
+            resolution_time = get_business_hours_between_dates(
+                ticket.get('created'), 
+                ticket.get('updated')
+            )
+            total_resolution_time += resolution_time
+            
+            # Count SLA violations (tickets resolved beyond target)
+            if resolution_time > sla_target_minutes:
+                sla_violations += 1
+    
+    # Calculate availability percentage
+    if total_tickets > 0:
+        # Method: Based on violation ratio
+        availability_percentage = ((total_tickets - sla_violations) / total_tickets) * 100
+        
+        # Average resolution time in business hours
+        avg_resolution_time = total_resolution_time / total_tickets if total_tickets > 0 else 0
+        
+        return {
+            'availability_percentage': round(availability_percentage, 2),
+            'avg_resolution_time_business_hours': round(avg_resolution_time / 60, 2),  # Convert to hours
+            'sla_violations': sla_violations,
+            'total_tickets': total_tickets,
+            'sla_target_hours': sla_target_hours
+        }
+    
+    return {
+        'availability_percentage': 100,
+        'avg_resolution_time_business_hours': 0,
+        'sla_violations': 0,
+        'total_tickets': 0,
+        'sla_target_hours': sla_target_hours
+    }
 
 # --- FONCTION POUR METTRE À JOUR LES STATS DASHBOARD EN BASE ---
 def update_dashboard_stats(return_data=False, projectKey=None, assignees_override=None):
@@ -424,27 +546,14 @@ def backup_admin_dashboard_stats():
             all_tickets_data = all_tickets_response.json()
 
 
-            # Calculer le SLA réel à partir des tickets résolus
-            total_resolution_time = 0
-            resolved_count = 0
-
-            # Trier les tickets récents par date de mise à jour pour le SLA
+            # Calculer le SLA réel à partir des tickets résolus avec heures ouvrées
             sorted_recent_tickets = sorted(
                 (ticket for ticket in recent_tickets_data if ticket.get('status') in ['Done', 'Fermée']),
                 key=lambda t: t.get('updated', '')
             )
 
-            # Calculer le SLA actuel (30 derniers tickets résolus)
-            for ticket in sorted_recent_tickets[:30]:
-                # Vérifie si le ticket est dans un statut valide pour le SLA
-                if ticket.get('status') in ['Done', 'Fermée']:
-                    resolution_time = get_minutes_between_dates(ticket.get('created'), ticket.get('updated'))
-                    total_resolution_time += resolution_time
-                    resolved_count += 1
-                total_resolution_time += resolution_time
-                resolved_count += 1
-
-            avg_resolution_time = round(total_resolution_time / resolved_count) if resolved_count > 0 else 0
+            # Calculer le SLA avec les heures ouvrées (30 derniers tickets résolus)
+            sla_data = calculate_sla_availability(sorted_recent_tickets[:30], sla_target_hours=48)
 
             # Préparer les données des assignés (pour resolved-by-assignee, utiliser les tickets récents)
             assignees = {}
@@ -479,7 +588,9 @@ def backup_admin_dashboard_stats():
                 "openTickets": kpis_data.get('total_open_tickets', 0),
                 "resolvedTickets": kpis_data.get('tickets_closed', 0),
                 "totalTickets": kpis_data.get('total_tickets', 0),
-                "averageResolutionTime": avg_resolution_time,
+                "averageResolutionTime": sla_data['avg_resolution_time_business_hours'],  # En heures ouvrées
+                "slaAvailability": sla_data['availability_percentage'],  # Nouveau: pourcentage de disponibilité SLA
+                "slaViolations": sla_data['sla_violations'],  # Nouveau: nombre de violations SLA
                 "supportHealth": kpis_data.get('support_health', 0) / 100,
                 "assignees": assignees_list,
                 "resolvedByAssignee": resolved_list,
@@ -1290,6 +1401,50 @@ def restart_server_options():
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
+
+@app.route('/api/SLA')
+@login_required
+def sla():
+    """Retourne les données SLA avec calcul en heures ouvrées"""
+    try:
+        # Récupérer les tickets récents fermés pour le calcul SLA
+        projectKey = os.getenv('JIRA_PROJECT_DEFAULT', JIRA_PROJECT_DEFAULT)
+        assignees_str = ','.join([f'"{a}"' for a in JIRA_ASSIGNEES])
+        jql = f'project = {projectKey} AND assignee IN ({assignees_str}) AND status = Closed AND resolved >= -30d ORDER BY created DESC'
+        issues = fetch_jira_issues(jql, fields='key,summary,status,assignee,created,updated,labels')
+        
+        tickets = []
+        for t in issues:
+            fields = t.get('fields', {})
+            tickets.append({
+                'key': t.get('key'),
+                'summary': fields.get('summary'),
+                'status': fields.get('status',{}).get('name'),
+                'assignee': fields.get('assignee',{}).get('displayName'),
+                'created': fields.get('created'),
+                'updated': fields.get('updated'),
+                'labels': fields.get('labels', []),
+            })
+        
+        # Calculer les métriques SLA avec heures ouvrées
+        sla_data = calculate_sla_availability(tickets, sla_target_hours=48)
+        
+        # Ajouter les données des tickets pour le détail
+        sla_data['tickets'] = tickets
+        sla_data['calculation_method'] = 'business_hours_only'
+        sla_data['business_hours_config'] = {
+            'hours_per_day': 7,
+            'schedule': '9h-12h + 13h-17h',
+            'working_days': 'Monday to Friday'
+        }
+        
+        return jsonify(sla_data)
+        
+    except Exception as e:
+        logging.error(f"[API /SLA] Erreur lors du calcul SLA : {e}")
+        return jsonify({'error': f'Erreur lors du calcul SLA: {e}'}), 500
+
+
 
 @app.route('/')
 def index():
