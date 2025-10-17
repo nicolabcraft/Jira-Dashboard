@@ -38,6 +38,44 @@
             font-size: 48px;
             color: #ff7e7e;
         }
+        
+        /* Bannière de bêta */
+        .beta-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #ff9500, #ff6b00);
+            color: white;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        .beta-banner .material-symbols-rounded {
+            font-size: 18px;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+        
+        /* Ajuster le contenu pour compenser la bannière */
+        body {
+            padding-top: 40px;
+        }
     </style>
     <script>
         // Vérifier si l'utilisateur est admin au chargement de la page
@@ -77,6 +115,12 @@
     </script>
 </head>
 <body>
+  <!-- Message de bêta -->
+  <div class="beta-banner">
+    <span class="material-symbols-rounded">science</span>
+    <span>Ceci est en bêta - Fonctionnalités en cours de développement</span>
+  </div>
+  
   <aside class="sidebar">
     <header class="sidebar-header">
       <a href="#" class="header-logo">
